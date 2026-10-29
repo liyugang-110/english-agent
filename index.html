@@ -665,6 +665,7 @@ function recordPcm(ms){
         const srcTotal=f32[0].length;
         const pcm=new Int16Array(srcTotal); let o=0;
         for(const c of f32){ for(let i=0;i<c.length;i++){ const s=Math.max(-1,Math.min(1,c[i])); pcm[o++]=s<0?s*0x8000:s*0x7fff; } }
+        window._lastSr=sr; window._lastSamples=srcTotal;
         resolve(pcm);
       },ms);
     }catch(e){ reject(e); }
@@ -693,9 +694,9 @@ async function doIse(target,status,attempt){
   status.innerHTML="🔍 正在评测你的发音…";
   let result;
   try{ result=await iseScore(pcm,target); }
-  catch(e){ status.innerHTML="评测失败："+escapeHtml(String(e.message||e)).slice(0,80); _checkState=null; return; }
+  catch(e){ status.innerHTML="评测失败："+escapeHtml(String(e.message||e)).slice(0,80)+(window._lastSr?`<br><small style="color:#94a3b8">诊断: sr=${window._lastSr}Hz 样本=${window._lastSamples} 时长≈${Math.round(window._lastSamples/((window._lastSr||16000))*1000)}ms</small>`:""); _checkState=null; return; }
   if(!_checkState)return;
-  if(result.error){ status.innerHTML="评测失败："+escapeHtml(result.error); _checkState=null; return; }
+  if(result.error){ status.innerHTML="评测失败："+escapeHtml(result.error)+(window._lastSr?`<br><small style="color:#94a3b8">诊断: sr=${window._lastSr}Hz 样本=${window._lastSamples}</small>`:""); _checkState=null; return; }
   const score=result.total;
   if(score>=75){
     status.innerHTML=`✅ <b style="color:#15803d">${score} 分（流利度${result.fluency} 准确度${result.accuracy} 完整度${result.integrity}）</b><br><span style="color:#15803d">读得很棒，可以继续下一句了！</span>`;

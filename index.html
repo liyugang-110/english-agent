@@ -652,6 +652,7 @@ function recordPcm(ms){
         stream.getTracks().forEach(t=>t.stop());
         try{ctx.close();}catch(e){}
         let f32=chunks, sr=ctx.sampleRate;
+        const total=chunks.reduce((a,c)=>a+c.length,0);
         // 部分手机浏览器忽略 sampleRate 参数，需重采样到16k
         const all=new Float32Array(total); let off0=0;
         for(const c of f32){ all.set(c,off0); off0+=c.length; }

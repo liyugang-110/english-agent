@@ -369,7 +369,7 @@ function _canUseTTS(){
 function speak(text,rate,quiet){
   text=(text||"").trim(); if(!text)return Promise.resolve();
   if(_canUseTTS()){
-    return new Promise(res=>{
+    return new Promise((res,rej)=>{
       try{
         speechSynthesis.cancel();
         const u=new SpeechSynthesisUtterance(text);
@@ -378,9 +378,9 @@ function speak(text,rate,quiet){
         const v=vs.find(v=>/en[-_]US/i.test(v.lang)&&/female|samantha|zira|aria|jenny/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang));
         if(v)u.voice=v;
         u.onend=()=>{_canAutoplay=true;res();};
-        u.onerror=()=>{_ttsBroken=true; _canAutoplay=false; speakOnline(text,rate||state.rate,quiet).then(res,res);};
+        u.onerror=()=>{_ttsBroken=true; _canAutoplay=false; speakOnline(text,rate||state.rate,quiet).then(res,rej);};
         speechSynthesis.speak(u);
-      }catch(e){ speakOnline(text,rate||state.rate,quiet).then(res,res); }
+      }catch(e){ speakOnline(text,rate||state.rate,quiet).then(res,rej); }
     });
   }
   return speakOnline(text,rate||state.rate,quiet);
@@ -421,7 +421,7 @@ function speakOnline(text,rate,quiet){
   return _playUrl("https://fanyi.baidu.com/gettts?lan=en&spd=3&source=web&text="+encodeURIComponent(text),rate)
   .catch(()=>_playUrl("https://dict.youdao.com/dictvoice?le=en&q="+encodeURIComponent(text),rate))
   .catch(()=>edgeTTS(text,rate).then(u=>_playUrl(u,rate)))
-  .catch(()=>{ if(!quiet)alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试"); });
+  .catch(e=>{ if(!quiet)alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试"); throw e; });
 }
 /* Edge TTS：免费神经语音，走 WebSocket，不受 CORS/自动播放外链限制 */
 function edgeTTS(text,rate){
@@ -584,7 +584,7 @@ async function sendToAnna(userText){
     : `\nThe learner is a Chinese person who wants to talk with foreigners in China. You play a friendly foreigner who only speaks English.`;
   const sys=`You are Anna, a friendly, patient English tutor for a Chinese adult beginner learner. Current scenario: "${state.current.title}". Goal: ${state.current.goal}.${roleLine}
 Reply in EXACTLY this 5-part format, plain text, no markdown:
-<In-character English reply, max 2 short simple sentences, then one short follow-up question>
+<In-character English reply, max 2 short simple sentences, then one short follow-up question. EXCEPTION: if the student is asking for help in Chinese (not practicing), this part is instead a direct Chinese answer from the teacher, prefixed with 【老师解答】>
 🇨🇳 <把上面英文逐句翻译成中文>
 📝 Correction: <corrected student sentence> — <one short Chinese sentence explaining the error>. If the student's sentence had no error, write: 没有！说得很棒！
 💡 怎么答: <用中文教学生如何回应或询问：给出回答思路 + 可用的句型或关键词，不要给完整答案，鼓励学生自己组句>
@@ -592,11 +592,12 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
 
 🎓 领读 规则（像真人老师一样判断）：
 - 先诊断学生这次说的情况：
-  A) 学生没说话 / 说中文 / 明显不会说 → 领读：先用一句中文指出关键表达，再用 " || " 分隔给出 2-3 个要跟读的英文小段（从短到长）。例如：这句话的关键是 a cup of coffee，跟我读 || a cup of coffee|一杯咖啡 || I'd like a cup of coffee|我想要一杯咖啡
-  B) 学生说了英文但发音或用法只错了一小处 → 只领读那个出错的词或短语。例如：注意 coffee 的重音在前面 || coffee|咖啡
-  C) 学生说得基本正确 → 只挑你(Anna)刚才回答里最关键的 1-2 个词或短语领读，帮学生听懂外国人的话。例如：记住这个关键词 || reservation|预订 || Do you have a reservation?|您有预订吗
-  D) 学生用中文问某个词怎么说 → 直接领读那个词或短句
-- 每个英文片段后面必须用 "|" 加上其中文意思，格式固定为：英文片段|中文
+  A) 学生用中文求助/提问（如"该怎么回答""XX是什么意思"）→ 第一段【不演角色，用中文以老师身份直接解答学生的问题】，然后 🎓 领读给出相关的词和例句（带翻译），让学生学完能接着对话
+  B) 学生没说话 / 说中文想学表达 → 领读：先用一句中文指出关键表达，再用 " || " 分隔给出 2-3 个要跟读的英文小段（从短到长）。例如：这句话的关键是 a cup of coffee，跟我读 || a cup of coffee|一杯咖啡 || I'd like a cup of coffee|我想要一杯咖啡
+  C) 学生说了英文但发音或用法只错了一小处 → 只领读那个出错的词或短语。例如：注意 coffee 的重音在前面 || coffee|咖啡
+  D) 学生说得基本正确 → 只挑你(Anna)刚才回答里最关键的 1-2 个词或短语领读，帮学生听懂外国人的话。例如：记住这个关键词 || reservation|预订 || Do you have a reservation?|您有预订吗
+  E) 学生用中文问某个词怎么说 → 直接领读那个词或短句
+- 每个英文片段后面必须用 "|" 加上其中文意思，格式固定为：英文片段|中文。没有翻译的领读是不合格的
 - 英文跟读片段必须短（不超过 8 个单词），用 " || " 分隔
 - 领读片段优先来自你(Anna)的英文回复（学生需要听懂外国人在说什么），其次才是学生该说的目标句。不要凭空编新句子
 
@@ -635,7 +636,7 @@ Rules:
   const msgEl=addMsg("ai",reply);
   // 自动朗读：总是尝试；被浏览器拦截时该消息的 🔊 会闪烁提醒点击
   const p=splitAnna(reply);
-  speak(p.reply||reply,null,true).then(()=>{
+  speak(p.reply||reply,null,true).catch(()=>{}).then(()=>{
     if(_canAutoplay===false){
       const sp=msgEl.querySelector(".speaker");
       if(sp){ sp.style.animation="pulse 1.2s infinite"; sp.title="自动播放被拦截，点我播放"; }
@@ -720,7 +721,12 @@ async function playDrill(d,ui){
     if(token!==_drillToken)return;
     const p=d.pieces[i];
     ui&&(ui.phase.innerHTML=`🔊 慢速示范：<b>${escapeHtml(p.en)}</b>${p.cn?` <span style="color:#94a3b8">（${escapeHtml(p.cn)}）</span>`:""} <span style="color:#94a3b8">(${i+1}/${d.pieces.length})</span>`);
-    await speak(p.en,0.7,true);   // 与正式朗读同一条链路，0.7倍速慢读
+    try{
+      await speak(p.en,0.7,true);   // 与正式朗读同一条链路，0.7倍速慢读
+    }catch(e){
+      if(token===_drillToken){ ui&&(ui.phase.innerHTML=`⚠️ 这个浏览器播放不了语音。请检查网络，或换个浏览器（Chrome/Edge）试试`); }
+      return;
+    }
     if(token!==_drillToken)return;
     ui&&(ui.phase.innerHTML=`🎧 轮到你读：<b>${escapeHtml(p.en)}</b>${p.cn?` <span style="color:#94a3b8">（${escapeHtml(p.cn)}）</span>`:""}`);
     await _sleep(2800); // 留足跟读时间

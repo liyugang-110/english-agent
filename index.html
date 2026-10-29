@@ -717,18 +717,18 @@ function iseScore(pcm,text){
           data:{status:0,data:""}
         };
         ws.send(JSON.stringify(first));
-        // 音频分片：business.cmd="auw" + aus(1首/2中/4末)，data.status=1；结束帧 cmd="aue"
-        const SAMPLES=6000;
+        // 官方流式要求：每帧 1280 字节（40ms 音频），约 40ms 间隔发送
+        const BYTES=1280;
         let off=0;
         const sendNext=()=>{
-          if(off>=pcm.length){
+          if(off>=pcm.length*2){
             ws.send(JSON.stringify({business:{cmd:"aue",aus:4},data:{status:2,data:""}}));
             return;
           }
-          const end=Math.min(off+SAMPLES,pcm.length);
-          const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2);
+          const end=Math.min(off+BYTES,pcm.length*2);
+          const bytes=new Uint8Array(pcm.buffer,off,end-off);
           const isFirst=off===0; off=end;
-          const isLast=off>=pcm.length;
+          const isLast=off>=pcm.length*2;
           ws.send(JSON.stringify({business:{cmd:"auw",aus:isLast?4:(isFirst?1:2)},data:{status:1,data:b64(bytes)}}));
           if(isLast) setTimeout(()=>{ try{ws.send(JSON.stringify({business:{cmd:"aue",aus:4},data:{status:2,data:""}}));}catch(e){} },40);
           else setTimeout(sendNext,40);

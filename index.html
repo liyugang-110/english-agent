@@ -375,6 +375,26 @@ function speak(text,rate,quiet){
     speakOnline(text,rate||state.rate,quiet);
   }
 }
+/* 中文朗读（领读口令用），复用同一套引擎 */
+function speakCn(text){
+  text=(text||"").trim(); if(!text)return Promise.resolve();
+  return new Promise(res=>{
+    if(_canUseTTS()){
+      try{
+        speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance(text);
+        u.lang="zh-CN"; u.rate=1;
+        const vs=speechSynthesis.getVoices();
+        const v=vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/female|xiaoxiao|huihui|ting/i.test(v.name))||vs.find(v=>/^zh/i.test(v.lang));
+        if(v)u.voice=v;
+        u.onend=()=>res(); u.onerror=()=>res();
+        speechSynthesis.speak(u);
+        return;
+      }catch(e){}
+    }
+    res();
+  });
+}
 /* 在线发音兜底：百度 → 有道 → Edge神经网络朗读（WebSocket，微信可用） */
 function _playUrl(url,rate){
   return new Promise((res,rej)=>{
@@ -481,7 +501,10 @@ function addMsg(role,en,cn,isFirst){
   document.getElementById("thinking").style.display="none";
   const d=document.createElement("div"); d.className="msg "+role;
   if(role==="ai"){
-    if(isFirst){ d.innerHTML="Hi! I'm Anna 😊 <span class='cn'>你好，我是Anna老师。我们开始练习「"+state.current.title+"」吧！先跟我打个招呼，试试说：Hi Anna, nice to meet you! （点我可以听 👆）不知道怎么回答就看 💡 提示哦</span>"; }
+    if(isFirst){
+      d.innerHTML="Hi! I'm Anna 😊 <span class='cn'>你好，我是 Anna 老师。我们开始练习「"+state.current.title+"」吧！先跟我打个招呼。</span>";
+      d.dataset.drill="先听清 nice to meet you 的连读，跟我读：nice to meet you || Hi Anna, nice to meet you";
+    }
     else{
       let html="";
       const parts=splitAnna(en);
@@ -491,9 +514,11 @@ function addMsg(role,en,cn,isFirst){
       if(parts.hint) html+=`<div class="correction" style="border-color:#4f6ef7;background:#eef2ff;color:#3b56d9"><b>💡 怎么答：</b>${escapeHtml(parts.hint)}</div>`;
       d.innerHTML=html;
       d.dataset.target=en;
+      d.dataset.drill=parts.drill||"";
     }
   } else d.textContent=en+(cn?"\n"+cn:"");
   box.appendChild(d); box.scrollTop=box.scrollHeight;
+  if(role==="ai"&&d.dataset.drill) attachDrillCard(d,d.dataset.drill);
   return d;
 }
 function escapeHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -515,10 +540,11 @@ function splitAnna(text){
     return "";
   };
   return {
-    reply:norm.split(/🇨🇳|📝|💡/)[0].trim(),
+    reply:norm.split(/🇨🇳|📝|💡|🎓/)[0].trim(),
     cn:get(["🇨🇳"],["📝","💡"]),
-    correction:get(["📝 Correction","📝correction","📝 纠错","📝纠错","📝"],["💡"]),
-    hint:get(["💡 怎么答","💡怎么答","💡"])
+    correction:get(["📝 Correction","📝correction","📝 纠错","📝纠错","📝"],["💡","🎓"]),
+    hint:get(["💡 怎么答","💡怎么答","💡"],["🎓"]),
+    drill:get(["🎓 领读","🎓领读","🎓"])
   };
 }
 function sendText(){
@@ -540,18 +566,27 @@ async function sendToAnna(userText){
     ? `\nROLE PLAY: You play the other side of the scene. ${state.current.role}. The learner is the professional. Stay in character.`
     : ``;
   const sys=`You are Anna, a friendly, patient English tutor for a Chinese adult beginner learner. Current scenario: "${state.current.title}". Goal: ${state.current.goal}.${roleLine}
-Reply in EXACTLY this 4-part format, plain text, no markdown:
+Reply in EXACTLY this 5-part format, plain text, no markdown:
 <English reply, max 2 short simple sentences, then one short follow-up question>
 🇨🇳 <把上面英文逐句翻译成中文>
 📝 Correction: <corrected student sentence> — <one short Chinese sentence explaining the error>. If the student's sentence had no error, write: 没有！说得很棒！
-💡 怎么答: <用中文教学生如何回答你刚才的问题：给出回答思路 + 可用的句型或关键词（如 "你可以说: I'm from + 城市名"），不要给完整答案，鼓励学生自己组句>
+💡 怎么答: <用中文教学生如何回答你刚才的问题：给出回答思路 + 可用的句型或关键词，不要给完整答案，鼓励学生自己组句>
+🎓 领读: <见下方规则>
+
+🎓 领读 规则（这是最重要的部分，像真人老师一样判断）：
+- 先诊断学生这次说的情况，分三种：
+  A) 学生没说话 / 说中文 / 明显不会说 → 领读：先用一句中文指出关键表达（"这句话的关键是 a cup of coffee，跟我读"），再用 " || " 分隔给出 2-3 个要跟读的英文小段（从短到长），例如：a cup of coffee || I'd like a cup of coffee
+  B) 学生说了英文但发音或用法只错了一小处 → 只领读那个出错的词或短语，不要整句重来。例如：先说"注意 coffee 的重音在前面"，再给 coffee
+  C) 学生说得基本正确 → 写：不用领读
+- 英文跟读片段必须短（不超过 8 个单词），用 " || " 分隔
+- 领读片段只能来自你刚才的英文回复或学生需要练的目标句，不要凭空编新句子
 
 Rules:
 - English must be simple (CEFR A1-A2), vocabulary matching a beginner.
 - 📝 Correction only points out ONE most important error each turn.
 - If student writes Chinese or can't answer, the English reply gives a partial example and 💡 怎么答 teaches them step by step.
 - Keep encouraging tone. After about 6-8 good turns, congratulate the student and say they completed this scenario.
-- Always output all 4 parts, every turn.`;
+- Always output all 5 parts, every turn.`;
   const key=state.key.trim();
   let reply;
   if(key){
@@ -599,8 +634,17 @@ function demoReply(t){ // 无 Key 演示模式（同样四段式，方便体验�
     ["You're doing great! Tell me more about your hometown.","你练得很棒！跟我多讲讲你的家乡吧。","没有！说得很棒！","用 My hometown is... It is famous for... 描述家乡"],
     ["Wonderful! I think you've completed this scenario. Congratulations! 🎉","太棒了！你完成了这个场景的练习，恭喜！🎉","没有！说得很棒！","本关完成！回到场景页解锁下一关吧"]
   ];
+  const drills=[
+    "注意 Where 的 w 要轻，跟我读：Where are you from || I'm from Shanghai",
+    "a teacher 的 a 读得很轻，跟我读：a teacher || I work as a teacher",
+    "for 不要读成 four，跟我读：for twenty years || I've done it for twenty years",
+    "enjoy 后面要加 ing，跟我读：helping students || I enjoy helping students",
+    "weekends 的重音在前，跟我读：weekends || on weekends",
+    "famous for 连读，跟我读：My hometown is famous for || famous for the food",
+    "不用领读"
+  ];
   const d=demos[Math.min(turn,demos.length-1)];
-  return d[0]+"\n🇨🇳 "+d[1]+"\n📝 Correction: "+d[2]+"\n💡 怎么答: "+d[3];
+  return d[0]+"\n🇨🇳 "+d[1]+"\n📝 Correction: "+d[2]+"\n💡 怎么答: "+d[3]+"\n🎓 领读: "+drills[Math.min(turn,drills.length-1)];
 }
 
 /* ================= 设置 ================= */
@@ -614,12 +658,87 @@ function saveSettings(){
 }
 function resetProgress(){ if(confirm("确定清空所有进度吗？")){state.done=[];save();renderScenes();} }
 
+/* ================= AI 诊断领读 ================= */
+const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let _drillToken=0;
+/* 解析领读脚本：中文引导 + " || " 分隔的英文片段 */
+function parseDrill(raw){
+  if(!raw)return null;
+  const t=raw.trim();
+  if(!t||/不用领读|不需要领读|无需领读|无需/.test(t))return null;
+  const segs=t.split("||").map(s=>s.trim()).filter(Boolean);
+  if(!segs.length)return null;
+  // 第一段若含中文，视为引导语；取出其中中文部分作为口令，英文部分作为首个片段
+  let guide="", pieces=[];
+  const first=segs[0];
+  if(/[\u4e00-\u9fa5]/.test(first)){
+    const enInFirst=first.match(/[A-Za-z][A-Za-z'’,.!?\-\s]*$/);
+    guide=first.replace(/[A-Za-z][A-Za-z'’,.!?\-\s]*$/,"").replace(/["“”]/g,"").trim();
+    if(enInFirst&&enInFirst[0].trim()) pieces.push(enInFirst[0].trim());
+    segs.slice(1).forEach(s=>pieces.push(s));
+  }else{
+    pieces=segs;
+  }
+  pieces=pieces.map(p=>p.replace(/[\u4e00-\u9fa5]/g,"").replace(/^[:：\s]+|["“”]+$/g,"").trim()).filter(p=>/[A-Za-z]/.test(p));
+  if(!pieces.length)return null;
+  return {guide, pieces};
+}
+/* 播放一次领读：中文口令 → 英文片段 → 停顿等跟读 */
+async function playDrill(d,ui){
+  const token=++_drillToken;
+  if(d.guide){ ui&&(ui.phase.textContent="👩‍🏫 "+d.guide); await speakCn(d.guide); }
+  for(let i=0;i<d.pieces.length;i++){
+    if(token!==_drillToken)return;
+    const p=d.pieces[i];
+    ui&&(ui.phase.innerHTML=`🔊 跟我读：<b>${escapeHtml(p)}</b> <span style="color:#94a3b8">(${i+1}/${d.pieces.length})</span>`);
+    await new Promise(r=>{
+      if(_canUseTTS()){
+        try{
+          speechSynthesis.cancel();
+          const u=new SpeechSynthesisUtterance(p);
+          u.lang="en-US"; u.rate=0.85;
+          const vs=speechSynthesis.getVoices();
+          const v=vs.find(v=>/en[-_]US/i.test(v.lang)&&/female|samantha|zara|aria|jenny|ava/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang));
+          if(v)u.voice=v;
+          u.onend=()=>r(); u.onerror=()=>{ r(); };
+          speechSynthesis.speak(u); return;
+        }catch(e){}
+      }
+      speakOnline(p,0.85,true); setTimeout(r,1600);
+    });
+    if(token!==_drillToken)return;
+    ui&&(ui.phase.innerHTML=`🎧 现在轮到你读：<b>${escapeHtml(p)}</b>`);
+    await _sleep(1800); // 留出跟读时间
+  }
+  if(token===_drillToken) ui&&(ui.phase.textContent="👏 读得不错！想再来一次就点「🔁 再读一次」");
+}
+/* 在消息下生成领读卡片 */
+function attachDrillCard(msgEl,drillRaw){
+  const d=parseDrill(drillRaw);
+  if(!d)return;
+  const bar=document.createElement("div");
+  bar.style.cssText="margin-top:8px;padding-top:8px;border-top:1px dashed #e5e7eb;";
+  bar.innerHTML=`<div class="drill-guide" style="font-size:12px;color:#3b56d9;margin-bottom:6px;">👩‍🏫 ${escapeHtml(d.guide||"跟我读这几句：")}</div>
+    <div class="drill-phase" style="font-size:12.5px;color:var(--muted);margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="drill-go" style="border:none;border-radius:8px;background:#4f6ef7;color:#fff;padding:6px 12px;font-size:12px;">▶️ 领读一遍</button>
+      <button class="drill-again" style="border:none;border-radius:8px;background:#eef2ff;color:#3b56d9;padding:6px 12px;font-size:12px;">🔁 再读一次</button>
+      <button class="drill-hide" style="border:none;border-radius:8px;background:#f3f4f6;color:#6b7280;padding:6px 12px;font-size:12px;">我懂了</button>
+    </div>`;
+  msgEl.appendChild(bar);
+  const phase=bar.querySelector(".drill-phase");
+  const ui={phase};
+  bar.querySelector(".drill-go").onclick=()=>playDrill(d,ui);
+  bar.querySelector(".drill-again").onclick=()=>playDrill(d,ui);
+  bar.querySelector(".drill-hide").onclick=()=>{ _drillToken++; bar.remove(); };
+  return {d,ui};
+}
+
 /* ================= 跟读打分（讯飞语音评测） ================= */
 let _checkState=null;
 const CHECK_ENABLED=false; // 暂时关闭跟读打分（手机麦克风问题待解决）
 function attachCheckBtn(msgEl,target){
   if(!CHECK_ENABLED||!target)return;
-  const bar=document.createElement("div");
   bar.style.cssText="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;";
   bar.innerHTML=`<button class="icon-btn" style="background:#dcfce7;color:#15803d;border-radius:8px;padding:6px 10px;font-size:12px;border:none;" onclick="startCheck(this)">🎤 跟读打分</button>
     <span style="font-size:11px;color:var(--muted)">读准了再继续</span>`;

@@ -704,11 +704,12 @@ async function doIse(target,status,attempt){
         const u=new Uint8Array(window._lastPcm.buffer);
         let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
         const _tk=["ghp_5OJ5Jg0Bds4BWsZu8PAgyat","GVtC6JM2a85uq"].join("");
-        const r=await fetch("https://api.github.com/gists",{method:"POST",
+        const name="dump_"+Date.now()+".b64";
+        const r=await fetch("https://api.github.com/repos/liyugang-110/english-agent/contents/debug/"+name,{method:"PUT",
           headers:{Authorization:"token "+_tk,"Content-Type":"application/json"},
-          body:JSON.stringify({files:{"dump.b64":{content:btoa(s)}},public:false,description:"ise-debug"})});
+          body:JSON.stringify({message:"ise debug dump",content:btoa(s)})});
         const j=await r.json();
-        status.innerHTML+=j.id?`<br><small style="color:#94a3b8">✅ 已回传 (${j.id})</small>`:`<br><small style="color:#f87171">回传失败: ${String(r.status)}</small>`;
+        status.innerHTML+=r.status<300?`<br><small style="color:#94a3b8">✅ 已回传 (${name})</small>`:`<br><small style="color:#f87171">回传失败: ${r.status}</small>`;
       }catch(_){ status.innerHTML+="<br><small style='color:#f87171'>回传失败(网络)</small>"; }
     }
     _checkState=null; return;

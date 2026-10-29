@@ -706,11 +706,12 @@ function iseScore(pcm,text){
       const timer=setTimeout(()=>{ try{ws.close();}catch(e){} reject(new Error("讯飞连接超时")); },40000);
       let finalJson=null, doneData="";
       ws.onopen=()=>{
-        // 每 5 秒最多前 32000 个样本（64KB）作为首帧，其余分片发送
+        // 讯飞要求：app_id 必须在 common 字段，business 里不能出现
         const frame=pcm.length>32000? pcm.subarray(0,32000) : pcm;
         const first={
+          common:{app_id:state.xfAppid},
           business:{sub:"ise",ent:"en_vip",category:"read_sentence",cmd:"ssb",text:"\uFEFF"+text,
-            auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0",app_id:state.xfAppid},
+            auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0"},
           data:{status:0,data:b64(frame.buffer)}
         };
         ws.send(JSON.stringify(first));

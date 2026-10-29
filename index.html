@@ -520,7 +520,10 @@ function addMsg(role,en,cn,isFirst){
   if(role==="ai"){
     if(isFirst){
       d.innerHTML="Hi! I'm Anna 😊 <span class='cn'>你好，我是 Anna 老师。我们开始练习「"+state.current.title+"」吧！先跟我打个招呼。</span>";
-      d.dataset.drill="先听清 nice to meet you 的连读，跟我读：nice to meet you || Hi Anna, nice to meet you";
+      const s=state.current;
+      d.dataset.drill = s.role
+        ? `问候之后马上接服务用语，一句连着说，跟我读 || ${s.sentences[0][0]}|${s.sentences[0][1]} || ${s.sentences[1][0]}|${s.sentences[1][1]}`
+        : "先听清 nice to meet you 的连读，跟我读 || nice to meet you|很高兴认识你 || Hi Anna, nice to meet you|你好 Anna，很高兴认识你";
     }
     else{
       let html="";
@@ -603,6 +606,7 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
 
 Rules:
 - English must be simple (CEFR A1-A2), vocabulary matching a beginner.
+- In service scenes (the learner plays the service person), teach the learner to CONNECT greeting and service language into one natural sentence, e.g. "Nice to meet you! Can I help you?" — never split them into two separate turns. Your drills and examples must model this connected style.
 - 📝 Correction only points out ONE most important error each turn.
 - If student writes Chinese or can't answer, the English reply gives a partial example and 💡 怎么答 teaches them step by step.
 - Keep encouraging tone. After about 6-8 good turns, congratulate the student and say they completed this scenario.

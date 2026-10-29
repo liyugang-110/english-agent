@@ -725,7 +725,7 @@ function iseScore(pcm,text){
           }
           const end=Math.min(off+SAMPLES,pcm.length);
           const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2); off=end;
-          ws.send(JSON.stringify({business:{cmd:"aup"},data:{status:1,data:b64(bytes)}}));
+          ws.send(JSON.stringify({business:{cmd:"auw"},data:{status:1,data:b64(bytes)}}));
           setTimeout(sendNext,40);
         };
         sendNext();

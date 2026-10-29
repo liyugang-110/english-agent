@@ -706,26 +706,26 @@ function iseScore(pcm,text){
       const timer=setTimeout(()=>{ try{ws.close();}catch(e){} reject(new Error("讯飞连接超时")); },40000);
       let finalJson=null, doneData="";
       ws.onopen=()=>{
-        // 讯飞要求：app_id 必须在 common 字段，business 里不能出现
-        const frame=pcm.length>32000? pcm.subarray(0,32000) : pcm;
+        // 分片限制：base64 后每片 ≤26000 字符 → 二进制每片 ≤12000 字节（6000 个 16bit 样本）
+        const SAMPLES=6000;
+        const frame=pcm.subarray(0,Math.min(SAMPLES,pcm.length));
         const first={
           common:{app_id:state.xfAppid},
           business:{sub:"ise",ent:"en_vip",category:"read_sentence",cmd:"ssb",text:"\uFEFF"+text,
             auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0"},
-          data:{status:0,data:b64(frame.buffer)}
+          data:{status:0,data:b64(new Uint8Array(pcm.buffer,0,frame.length*2))}
         };
         ws.send(JSON.stringify(first));
-        // 剩余音频分片（每片 2560 字节）
-        const total=pcm.length; let off=frame.length;
+        // 剩余音频分片
+        let off=frame.length;
         const sendNext=()=>{
-          if(off>=total){ ws.send(JSON.stringify({data:{status:2,data:""}})); return; }
-          const end=Math.min(off+1280,total);
-          const slice=pcm.subarray(off,end); off=end;
-          ws.send(JSON.stringify({data:{status:1,data:b64(slice.buffer)}}));
+          if(off>=pcm.length){ ws.send(JSON.stringify({data:{status:2,data:""}})); return; }
+          const end=Math.min(off+SAMPLES,pcm.length);
+          const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2); off=end;
+          ws.send(JSON.stringify({data:{status:1,data:b64(bytes)}}));
           setTimeout(sendNext,40);
         };
-        if(frame.length>=32000) ws.send(JSON.stringify({data:{status:2,data:""}}));
-        else sendNext();
+        sendNext();
       };
       ws.onmessage=ev=>{
         let msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }

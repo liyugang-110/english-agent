@@ -336,7 +336,7 @@ function closeModal(id){document.getElementById(id).style.display="none";}
 function openModal(id){document.getElementById(id).style.display="flex";}
 
 /* ================= 朗读 TTS ================= */
-let _ttsBroken=false;
+let _ttsBroken=false, _canAutoplay=null; // null=未知, true/false=自动播放是否可行
 function _canUseTTS(){
   if(_ttsBroken)return false;
   if(!("speechSynthesis" in window))return false;
@@ -344,7 +344,7 @@ function _canUseTTS(){
   if(/MicroMessenger/i.test(navigator.userAgent))return false;
   return true;
 }
-function speak(text,rate){
+function speak(text,rate,quiet){
   text=(text||"").trim(); if(!text)return;
   if(_canUseTTS()){
     speechSynthesis.cancel();
@@ -353,30 +353,30 @@ function speak(text,rate){
     const vs=speechSynthesis.getVoices();
     const v=vs.find(v=>/en[-_]US/i.test(v.lang)&&/female|samantha|zira|aria|jenny/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang));
     if(v)u.voice=v;
-    u.onerror=()=>{_ttsBroken=true; speakOnline(text,rate||state.rate);};
+    u.onend=()=>{_canAutoplay=true;};
+    u.onerror=()=>{_ttsBroken=true; _canAutoplay=false; speakOnline(text,rate||state.rate,quiet);};
     speechSynthesis.speak(u);
   }else{
-    speakOnline(text,rate||state.rate);
+    speakOnline(text,rate||state.rate,quiet);
   }
 }
 /* 在线发音兜底：百度 → 有道 → Edge神经网络朗读（WebSocket，微信可用） */
-let _audio=null;
 function _playUrl(url,rate){
   return new Promise((res,rej)=>{
     const a=new Audio();
     a.playbackRate=rate? Math.min(1.5,Math.max(0.6,rate+0.15)) : 1;
-    a.onended=res; a.onerror=rej;
+    a.onended=()=>{_canAutoplay=true;res();}; a.onerror=()=>{_canAutoplay=false;rej();};
     a.src=url;
-    a.play().then(()=>{}).catch(rej);
+    a.play().then(()=>{}).catch(()=>{_canAutoplay=false;rej();});
     setTimeout(()=>rej(new Error("timeout")),12000);
   });
 }
-function speakOnline(text,rate){
+function speakOnline(text,rate,quiet){
   text=text.replace(/\s+/g," ").trim().slice(0,200);
   _playUrl("https://fanyi.baidu.com/gettts?lan=en&spd=3&source=web&text="+encodeURIComponent(text),rate)
   .catch(()=>_playUrl("https://dict.youdao.com/dictvoice?le=en&q="+encodeURIComponent(text),rate))
-  .catch(()=>edgeTTS(text,rate))
-  .catch(()=>alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试"));
+  .catch(()=>edgeTTS(text,rate).then(u=>_playUrl(u,rate)))
+  .catch(()=>{ if(!quiet)alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试"); });
 }
 /* Edge TTS：免费神经语音，走 WebSocket，不受 CORS/自动播放外链限制 */
 function edgeTTS(text,rate){
@@ -474,6 +474,7 @@ function addMsg(role,en,cn,isFirst){
       if(parts.correction) html+=`<div class="correction"><b>📝 纠错：</b>${escapeHtml(parts.correction)}</div>`;
       if(parts.hint) html+=`<div class="correction" style="border-color:#4f6ef7;background:#eef2ff;color:#3b56d9"><b>💡 怎么答：</b>${escapeHtml(parts.hint)}</div>`;
       d.innerHTML=html;
+      d.dataset.target=en;
     }
   } else d.textContent=en+(cn?"\n"+cn:"");
   box.appendChild(d); box.scrollTop=box.scrollHeight;
@@ -554,9 +555,11 @@ Rules:
     reply=demoReply(userText);
   }
   state.history.push({role:"assistant",content:reply});
-  addMsg("ai",reply);
-  // 不自动朗读：微信等环境要求用户手势才能播放，用户点 🔊 即可听
+  const msgEl=addMsg("ai",reply);
+  // 自动朗读：成功的环境直接播；失败的环境静默降级为点 🔊
   const p=splitAnna(reply);
+  if(_canAutoplay!==false) speak(p.reply||reply,null,true);
+  attachCheckBtn(msgEl,p.reply||reply);
   // 是否通关
   if(/completed this scenario|congratulations/i.test(reply)){
     if(!state.done.includes(state.current.id)){state.done.push(state.current.id);save();}
@@ -585,6 +588,59 @@ function saveSettings(){
 }
 function resetProgress(){ if(confirm("确定清空所有进度吗？")){state.done=[];save();renderScenes();} }
 
+/* ================= 跟读打分 ================= */
+let _checkState=null; // {target, tries}
+function attachCheckBtn(msgEl,target){
+  if(!target)return;
+  const bar=document.createElement("div");
+  bar.style.cssText="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;";
+  bar.innerHTML=`<button class="icon-btn" style="background:#dcfce7;color:#15803d;border-radius:8px;padding:6px 10px;font-size:12px;border:none;" onclick="startCheck(this)">🎤 跟读打分</button>
+    <span style="font-size:11px;color:var(--muted)">读准了再继续，读不准会提示重来</span>`;
+  msgEl.appendChild(bar);
+}
+function _similarity(a,b){
+  const wa=a.toLowerCase().replace(/[^a-z' ]/g," ").split(/\s+/).filter(Boolean);
+  const wb=b.toLowerCase().replace(/[^a-z' ]/g," ").split(/\s+/).filter(Boolean);
+  if(!wb.length)return 0;
+  // 编辑距离（词级）
+  const m=wa.length,n=wb.length;
+  const dp=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++)dp[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+    dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(wa[i-1]===wb[j-1]?0:1));
+  return Math.max(0,1-dp[m][n]/Math.max(m,n));
+}
+function startCheck(btn){
+  if(!SR){alert("跟读打分需要浏览器语音识别（浏览器里可用）。微信里请先跟读 🔊 后自行判断。");return;}
+  if(_checkState){try{window._checkRec.stop();}catch(e){}}
+  const target=btn.closest(".msg").dataset.target;
+  _checkState={target,tries:0,btn};
+  _runCheck(btn);
+}
+function _runCheck(btn){
+  const msgEl=btn.closest(".msg");
+  let status=msgEl.querySelector(".check-status");
+  if(!status){status=document.createElement("div");status.className="check-status cn";msgEl.appendChild(status);}
+  status.innerHTML="🎙️ 请跟读上面的句子…（自动判分）";
+  const rec=new SR(); window._checkRec=rec;
+  rec.lang="en-US"; rec.interimResults=false;
+  rec.onresult=e=>{
+    const heard=e.results[0][0].transcript;
+    const sim=_similarity(heard,_checkState.target);
+    _checkState.tries++;
+    if(sim>=0.7){
+      status.innerHTML=`✅ <b style="color:#15803d">读得很准（${Math.round(sim*100)}分）！继续下一句吧！</b>`;
+      _checkState=null;
+      speak("Great job!");
+    }else{
+      status.innerHTML=`❌ 第${_checkState.tries}次 ${Math.round(sim*100)}分 — 听到你说的: "<i>${escapeHtml(heard)}</i>"<br>再听一遍 🔊，重新跟读中…（点击打分按钮可停止）`;
+      setTimeout(()=>{ if(_checkState)_runCheck(btn); },600);
+    }
+  };
+  rec.onend=()=>{ if(_checkState)setTimeout(()=>{try{rec.start();}catch(e){}},300); };
+  rec.onerror=()=>{ if(_checkState){status.innerHTML="没听清，再试一次（或用打分按钮停止）"; } };
+  try{rec.start();}catch(e){}
+}
 /* ================= 自由学模式 ================= */
 function openFree(){
   document.getElementById("scenePage").style.display="none";

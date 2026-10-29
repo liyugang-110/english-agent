@@ -152,11 +152,10 @@
   <div id="thinking">Anna 正在听你说的内容，思考中…</div>
   <div id="inputBar">
     <div id="typeRow">
-      <input id="typeInput" placeholder="也可以打字回复（拼音或英文）" onkeydown="if(event.key==='Enter')sendText()">
+      <input id="typeInput" placeholder="点这里 → 用键盘上的 🎤 说英语" onkeydown="if(event.key==='Enter')sendText()">
       <button id="sendBtn" onclick="sendText()">发送</button>
     </div>
-    <button id="micBtn" onclick="toggleMic()">🎤 按下开始说英语</button>
-    <div class="hint">推荐：点输入框 → 用键盘上的 🎤 语音输入英语 ✨</div>
+    <div class="hint">点输入框，用键盘上的 🎤 语音说英语，说完点发送 ✨</div>
   </div>
 </div>
 
@@ -455,6 +454,7 @@ function toggleMic(){
 }
 function micBtnUI(){
   const b=document.getElementById("micBtn");
+  if(!b)return;
   b.classList.toggle("listening",state.listening);
   b.textContent=state.listening?"🔴 正在听你说话…说完自动发送":"🎤 按下开始说英语";
 }
@@ -522,9 +522,11 @@ function splitAnna(text){
   };
 }
 function sendText(){
-  const t=document.getElementById("typeInput").value.trim();
+  const inp=document.getElementById("typeInput");
+  const t=inp.value.trim();
   if(!t)return;
-  document.getElementById("typeInput").value="";
+  inp.value="";
+  try{ inp.blur(); }catch(e){}   // 发送后收起键盘，方便看 Anna 回复
   addMsg("user",t,""); sendToAnna(t);
 }
 function showThinking(){document.getElementById("thinking").style.display="block";

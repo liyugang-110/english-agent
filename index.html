@@ -640,7 +640,8 @@ function recordPcm(ms){
   return new Promise(async(resolve,reject)=>{
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
-      const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+      // 注意：不指定 sampleRate，部分安卓浏览器指定后麦克风会变成近静音
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
       await ctx.resume();
       const src=ctx.createMediaStreamSource(stream);
       const chunks=[];
@@ -666,6 +667,8 @@ function recordPcm(ms){
         const pcm=new Int16Array(srcTotal); let o=0;
         for(const c of f32){ for(let i=0;i<c.length;i++){ const s=Math.max(-1,Math.min(1,c[i])); pcm[o++]=s<0?s*0x8000:s*0x7fff; } }
         window._lastSr=sr; window._lastSamples=srcTotal; window._lastPcm=pcm;
+        let mx=0; for(let i=0;i<pcm.length;i++){ const v=Math.abs(pcm[i]); if(v>mx)mx=v; }
+        window._lastMax=mx;
         resolve(pcm);
       },ms);
     }catch(e){ reject(e); }
@@ -691,6 +694,10 @@ async function doIse(target,status,attempt){
   status.innerHTML=`🎙️ 第${attempt}次：请跟读 —— <b>${escapeHtml(target)}</b>`;
   let pcm;
   try{ pcm=await recordPcm(5000); }catch(e){ status.innerHTML="❌ 麦克风不可用，请允许权限"; _checkState=null; return; }
+  if((window._lastMax||0)<300){ // 近静音：没录到声音
+    status.innerHTML=`❌ 没检测到你的声音（最大音量 ${window._lastMax}）<br><small>请对着麦克风大声朗读再点打分；若仍无声，请重启浏览器或检查是否被其他应用占用麦克风</small>`;
+    _checkState=null; return;
+  }
   status.innerHTML="🔍 正在评测你的发音…";
   let result;
   try{ result=await iseScore(pcm,target); }

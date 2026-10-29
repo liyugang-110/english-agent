@@ -716,13 +716,16 @@ function iseScore(pcm,text){
           data:{status:0,data:b64(new Uint8Array(pcm.buffer,0,frame.length*2))}
         };
         ws.send(JSON.stringify(first));
-        // 剩余音频分片
+        // 剩余音频分片：每帧 business 需带 cmd:"aup"，结束帧 cmd:"aue"
         let off=frame.length;
         const sendNext=()=>{
-          if(off>=pcm.length){ ws.send(JSON.stringify({data:{status:2,data:""}})); return; }
+          if(off>=pcm.length){
+            ws.send(JSON.stringify({business:{cmd:"aue"},data:{status:2,data:""}}));
+            return;
+          }
           const end=Math.min(off+SAMPLES,pcm.length);
           const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2); off=end;
-          ws.send(JSON.stringify({data:{status:1,data:b64(bytes)}}));
+          ws.send(JSON.stringify({business:{cmd:"aup"},data:{status:1,data:b64(bytes)}}));
           setTimeout(sendNext,40);
         };
         sendNext();

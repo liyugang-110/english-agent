@@ -730,7 +730,10 @@ function iseScore(pcm,text){
           const isFirst=off===0; off=end;
           const isLast=off>=pcm.length*2;
           ws.send(JSON.stringify({business:{cmd:"auw",aus:isLast?4:(isFirst?1:2)},data:{status:1,data:b64(bytes)}}));
-          if(isLast) setTimeout(()=>{ try{ws.send(JSON.stringify({business:{cmd:"aue",aus:4},data:{status:2,data:""}}));}catch(e){} },40);
+          if(isLast){
+            // 结束帧：ISE 没有 aue，用 auw + aus:4 + status:2
+            setTimeout(()=>{ try{ws.send(JSON.stringify({business:{cmd:"auw",aus:4},data:{status:2,data:""}}));}catch(e){} },40);
+          }
           else setTimeout(sendNext,40);
         };
         sendNext();
@@ -748,16 +751,17 @@ function iseScore(pcm,text){
           try{ ws.close(); }catch(e){}
           try{
             const txt=atob(doneData);
-            const obj=JSON.parse(txt);
-            const r=obj.data&&obj.data.read_sentence || obj.read_sentence;
-            if(!r) return resolve({error:"无评测结果"});
-            const info=r.info||{};
+            // ISE 返回 XML，5 分制 → 换算为百分制
+            const doc=new DOMParser().parseFromString(txt,"text/xml");
+            const paper=doc.querySelector("rec_paper");
+            if(!paper) return resolve({error:"无评测结果"});
+            const s=v=>Math.round(parseFloat(v)*20)||0;
             resolve({
-              total: Math.round(Number(info.total_score)||0),
-              fluency: Math.round(Number(info.fluency_score)||0),
-              accuracy: Math.round(Number(info.accuracy_score)||0),
-              integrity: Math.round(Number(info.integrity_score)||0),
-              words: (r.word||[]).map(w=>({word:w.content, score:Math.round(Number(w.scores&&w.scores.total_score)||0)}))
+              total: s(paper.getAttribute("total_score")),
+              fluency: s(paper.getAttribute("fluency_score")),
+              accuracy: s(paper.getAttribute("accuracy_score")),
+              integrity: s(paper.getAttribute("integrity_score")),
+              words: Array.from(doc.querySelectorAll("sentence > word")).map(w=>({word:w.getAttribute("content"), score:s(w.getAttribute("total_score"))}))
             });
           }catch(e){ reject(new Error("结果解析失败")); }
         }

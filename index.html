@@ -334,39 +334,62 @@ function speak(text,rate){
     speakOnline(text,rate||state.rate);
   }
 }
-/* 在线发音兜底：多源尝试（百度翻译 → 有道），免费无需 Key */
-let _audio=null, _unlocked=false;
-/* 微信/手机浏览器首次触摸时解锁音频播放 */
-document.addEventListener("touchstart",function(){
-  if(_unlocked)return; _unlocked=true;
-  try{
-    if(!_audio)_audio=new Audio();
-    _audio.src="data:audio/mp3;base64,//uQxAAIAAAAp4AAAAWgAAAQAAAJ8AAQuADiABEATgAMjAwMDAwMDAwMDAwMDAwMDSwMDAwMDAwMDAwMDAwMDAwNAAwMDAwMDAwMDAwMDAwMDAzoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
-    _audio.play().catch(()=>{});
-    if(window.WeixinJSBridge){try{WeixinJSBridge.invoke("getNetworkType",{},function(){_audio.play().catch(()=>{});});}catch(e){}}
-  }catch(e){}
-},{once:true});
+/* 在线发音兜底：百度 → 有道 → Edge神经网络朗读（WebSocket，微信可用） */
+let _audio=null;
+function _playUrl(url,rate){
+  return new Promise((res,rej)=>{
+    const a=new Audio();
+    a.playbackRate=rate? Math.min(1.5,Math.max(0.6,rate+0.15)) : 1;
+    a.onended=res; a.onerror=rej;
+    a.src=url;
+    a.play().then(()=>{}).catch(rej);
+    setTimeout(()=>rej(new Error("timeout")),12000);
+  });
+}
 function speakOnline(text,rate){
   text=text.replace(/\s+/g," ").trim().slice(0,200);
-  const urls=[
-    "https://fanyi.baidu.com/gettts?lan=en&spd=3&source=web&text="+encodeURIComponent(text),
-    "https://fanyi.baidu.com/gettts?lan=en&spd=3&source=web&text="+encodeURIComponent(text),
-    "https://dict.youdao.com/dictvoice?le=en&q="+encodeURIComponent(text)
-  ];
-  if(!_audio){_audio=new Audio(); _audio.preload="none";}
-  const pr=rate? Math.min(1.5,Math.max(0.6,rate+0.15)) : 1;
-  let i=0;
-  const tryNext=()=>{
-    if(i>=urls.length){
-      alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试");
-      return;
-    }
-    _audio.src=urls[i++];
-    _audio.playbackRate=pr;
-    _audio.play().catch(()=>{ tryNext(); });
-  };
-  _audio.onerror=tryNext;
-  tryNext();
+  _playUrl("https://fanyi.baidu.com/gettts?lan=en&spd=3&source=web&text="+encodeURIComponent(text),rate)
+  .catch(()=>_playUrl("https://dict.youdao.com/dictvoice?le=en&q="+encodeURIComponent(text),rate))
+  .catch(()=>edgeTTS(text,rate))
+  .catch(()=>alert("语音播放失败：请点一下屏幕任意位置，再点 🔊 重试"));
+}
+/* Edge TTS：免费神经语音，走 WebSocket，不受 CORS/自动播放外链限制 */
+function edgeTTS(text,rate){
+  return new Promise((resolve,reject)=>{
+    const TRUSTED="6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+    if(!window.crypto||!crypto.subtle||!window.WebSocket){reject(new Error("unsupported"));return;}
+    const t=(BigInt(Math.floor(Date.now()/1000))+11644473600n)*10000000n;
+    const rounded=(t/3000000000n)*3000000000n;
+    crypto.subtle.digest("SHA-256",new TextEncoder().encode(rounded.toString()+TRUSTED)).then(hash=>{
+      const gec=[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+      let ws;
+      try{ ws=new WebSocket("wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken="+TRUSTED+"&Sec-MS-GEC="+gec+"&Sec-MS-GEC-Version=1-131.0.2903.99"); }
+      catch(e){reject(e);return;}
+      ws.binaryType="arraybuffer";
+      const chunks=[]; let timer=setTimeout(()=>{try{ws.close();}catch(e){} reject(new Error("edge timeout"));},15000);
+      ws.onopen=()=>{
+        const id=crypto.randomUUID().replace(/-/g,"");
+        const date=new Date().toString();
+        ws.send(`X-Timestamp:${date}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+        const ratePct=rate&&rate<1?"-"+Math.round((1-rate)*100)+"%":(rate&&rate>1?"+"+Math.round((rate-1)*100)+"%":"+0%");
+        const ssml=`<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='en-US-AvaNeural'><prosody rate='${ratePct}'>${text.replace(/[<>&]/g," ")}</prosody></voice></speak>`;
+        ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${date}Z\r\nPath:ssml\r\n\r\n${ssml}`);
+      };
+      ws.onmessage=ev=>{
+        if(typeof ev.data==="string"){
+          if(ev.data.includes("Path:turn.end")){
+            clearTimeout(timer); try{ws.close();}catch(e){}
+            resolve(URL.createObjectURL(new Blob(chunks,{type:"audio/mp3"})));
+          }
+        }else if(ev.data instanceof ArrayBuffer){
+          const dv=new DataView(ev.data);
+          const hlen=dv.getUint16(0);
+          chunks.push(new Uint8Array(ev.data,2+hlen));
+        }
+      };
+      ws.onerror=()=>{clearTimeout(timer);reject(new Error("edge error"));};
+    }).catch(reject);
+  });
 }
 if("speechSynthesis" in window){speechSynthesis.onvoiceschanged=()=>{};}
 

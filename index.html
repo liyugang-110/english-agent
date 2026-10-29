@@ -710,7 +710,7 @@ function iseScore(pcm,text){
         const SAMPLES=6000;
         const frame=pcm.subarray(0,Math.min(SAMPLES,pcm.length));
         const first={
-          common:{app_id:state.xfAppid},
+          common:{app_id:state.xfAppid,sid:Date.now().toString(36)+Math.random().toString(36).slice(2,10)},
           business:{sub:"ise",ent:"en_vip",category:"read_sentence",cmd:"ssb",text:"\uFEFF"+text,
             auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0"},
           data:{status:0,data:b64(new Uint8Array(pcm.buffer,0,frame.length*2))}

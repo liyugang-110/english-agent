@@ -707,26 +707,28 @@ function iseScore(pcm,text){
       let finalJson=null, doneData="";
       ws.onopen=()=>{
         // 分片限制：base64 后每片 ≤26000 字符 → 二进制每片 ≤12000 字节（6000 个 16bit 样本）
-        const SAMPLES=6000;
-        const frame=pcm.subarray(0,Math.min(SAMPLES,pcm.length));
         const first={
-          common:{app_id:state.xfAppid,sid:Date.now().toString(36)+Math.random().toString(36).slice(2,10)},
+          common:{app_id:state.xfAppid},
           business:{sub:"ise",ent:"en_vip",category:"read_sentence",cmd:"ssb",text:"\uFEFF"+text,
-            auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0"},
-          data:{status:0,data:b64(new Uint8Array(pcm.buffer,0,frame.length*2))}
+            auf:"audio/L16;rate=16000",aue:"raw",tte:"utf-8",ttp_skip:true,plev:"0"},
+          data:{status:0,data:""}
         };
         ws.send(JSON.stringify(first));
-        // 剩余音频分片：每帧 business 需带 cmd:"aup"，结束帧 cmd:"aue"
-        let off=frame.length;
+        // 音频分片：business.cmd="auw" + aus(1首/2中/4末)，data.status=1；结束帧 cmd="aue"
+        const SAMPLES=6000;
+        let off=0;
         const sendNext=()=>{
           if(off>=pcm.length){
-            ws.send(JSON.stringify({business:{cmd:"aue"},data:{status:2,data:""}}));
+            ws.send(JSON.stringify({business:{cmd:"aue",aus:4},data:{status:2,data:""}}));
             return;
           }
           const end=Math.min(off+SAMPLES,pcm.length);
-          const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2); off=end;
-          ws.send(JSON.stringify({business:{cmd:"auw"},data:{status:1,data:b64(bytes)}}));
-          setTimeout(sendNext,40);
+          const bytes=new Uint8Array(pcm.buffer,off*2,(end-off)*2);
+          const isFirst=off===0; off=end;
+          const isLast=off>=pcm.length;
+          ws.send(JSON.stringify({business:{cmd:"auw",aus:isLast?4:(isFirst?1:2)},data:{status:1,data:b64(bytes)}}));
+          if(isLast) setTimeout(()=>{ try{ws.send(JSON.stringify({business:{cmd:"aue",aus:4},data:{status:2,data:""}}));}catch(e){} },40);
+          else setTimeout(sendNext,40);
         };
         sendNext();
       };

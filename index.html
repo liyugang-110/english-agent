@@ -164,6 +164,13 @@
     <h2>⚙️ 设置</h2>
     <label>DeepSeek API Key（存在你自己手机本地，不上传）</label>
     <input id="apiKey" type="password" placeholder="sk-...">
+    <label>讯飞开放平台 APPID（用于跟读打分，可选）</label>
+    <input id="xfAppid" type="password" placeholder="讯飞控制台的 APPID">
+    <label>讯飞 API Key</label>
+    <input id="xfKey" type="password" placeholder="APIKey">
+    <label>讯飞 API Secret</label>
+    <input id="xfSecret" type="password" placeholder="APISecret">
+    <div class="tip">跟读打分用讯飞识别（国内可用）：在 <b>xinghuo.xfyun.cn/sparkapi</b> 或 console.xfyun.cn 注册 → 控制台创建应用 → 拿到 APPID / APIKey / APISecret 三个值填入。免费额度每天几百次，够用。</div>
     <div class="tip">🔑 当前如显示的是<strong>演示回复</strong>（无真实纠错），说明还没填 Key。在 <b>platform.deepseek.com</b> 注册 → 充值少量金额 → 创建 API Key（sk-开头）→ 粘贴到这里。Key 只保存在你手机本地。</div>
     <label>英语语速（朗读速度）</label>
     <input id="rate" type="number" step="0.1" min="0.5" max="1.2" value="0.85">
@@ -282,13 +289,19 @@ const SCENES = [
 /* ================= 状态 ================= */
 let state = {
   key: localStorage.getItem("anna_key") || "",
+  xfAppid: localStorage.getItem("anna_xfappid") || "",
+  xfKey: localStorage.getItem("anna_xfkey") || "",
+  xfSecret: localStorage.getItem("anna_xfsecret") || "",
   rate: parseFloat(localStorage.getItem("anna_rate") || "0.85"),
   done: JSON.parse(localStorage.getItem("anna_done") || "[]"),
   current: null,
   history: [],
   listening: false
 };
-function save(){ localStorage.setItem("anna_key",state.key); localStorage.setItem("anna_rate",state.rate);
+function save(){ localStorage.setItem("anna_key",state.key);
+  localStorage.setItem("anna_xfappid",state.xfAppid); localStorage.setItem("anna_xfkey",state.xfKey);
+  localStorage.setItem("anna_xfsecret",state.xfSecret);
+  localStorage.setItem("anna_rate",state.rate);
   localStorage.setItem("anna_done",JSON.stringify(state.done)); }
 
 /* ================= 场景页渲染 ================= */
@@ -583,63 +596,161 @@ function demoReply(t){ // 无 Key 演示模式（同样四段式，方便体验�
 /* ================= 设置 ================= */
 function saveSettings(){
   state.key=document.getElementById("apiKey").value.trim();
+  state.xfAppid=document.getElementById("xfAppid").value.trim();
+  state.xfKey=document.getElementById("xfKey").value.trim();
+  state.xfSecret=document.getElementById("xfSecret").value.trim();
   state.rate=parseFloat(document.getElementById("rate").value)||0.85;
   save(); closeModal("settingsModal"); speak("Hello! I am Anna. Nice to meet you!");
 }
 function resetProgress(){ if(confirm("确定清空所有进度吗？")){state.done=[];save();renderScenes();} }
 
-/* ================= 跟读打分 ================= */
-let _checkState=null; // {target, tries}
+/* ================= 跟读打分（讯飞语音评测） ================= */
+let _checkState=null;
 function attachCheckBtn(msgEl,target){
   if(!target)return;
   const bar=document.createElement("div");
   bar.style.cssText="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;";
   bar.innerHTML=`<button class="icon-btn" style="background:#dcfce7;color:#15803d;border-radius:8px;padding:6px 10px;font-size:12px;border:none;" onclick="startCheck(this)">🎤 跟读打分</button>
-    <span style="font-size:11px;color:var(--muted)">读准了再继续，读不准会提示重来</span>`;
+    <span style="font-size:11px;color:var(--muted)">读准了再继续</span>`;
   msgEl.appendChild(bar);
 }
-function _similarity(a,b){
-  const wa=a.toLowerCase().replace(/[^a-z' ]/g," ").split(/\s+/).filter(Boolean);
-  const wb=b.toLowerCase().replace(/[^a-z' ]/g," ").split(/\s+/).filter(Boolean);
-  if(!wb.length)return 0;
-  // 编辑距离（词级）
-  const m=wa.length,n=wb.length;
-  const dp=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
-  for(let j=0;j<=n;j++)dp[0][j]=j;
-  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
-    dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(wa[i-1]===wb[j-1]?0:1));
-  return Math.max(0,1-dp[m][n]/Math.max(m,n));
-}
 function startCheck(btn){
-  if(!SR){alert("跟读打分需要浏览器语音识别（浏览器里可用）。微信里请先跟读 🔊 后自行判断。");return;}
-  if(_checkState){try{window._checkRec.stop();}catch(e){}}
-  const target=btn.closest(".msg").dataset.target;
-  _checkState={target,tries:0,btn};
-  _runCheck(btn);
-}
-function _runCheck(btn){
+  if(_checkState){ _checkState=null; try{window._checkRec&&window._checkRec.stop();}catch(e){} return; }
   const msgEl=btn.closest(".msg");
+  const target=msgEl.dataset.target;
   let status=msgEl.querySelector(".check-status");
-  if(!status){status=document.createElement("div");status.className="check-status cn";msgEl.appendChild(status);}
-  status.innerHTML="🎙️ 请跟读上面的句子…（自动判分）";
-  const rec=new SR(); window._checkRec=rec;
-  rec.lang="en-US"; rec.interimResults=false;
-  rec.onresult=e=>{
-    const heard=e.results[0][0].transcript;
-    const sim=_similarity(heard,_checkState.target);
-    _checkState.tries++;
-    if(sim>=0.7){
-      status.innerHTML=`✅ <b style="color:#15803d">读得很准（${Math.round(sim*100)}分）！继续下一句吧！</b>`;
-      _checkState=null;
-      speak("Great job!");
-    }else{
-      status.innerHTML=`❌ 第${_checkState.tries}次 ${Math.round(sim*100)}分 — 听到你说的: "<i>${escapeHtml(heard)}</i>"<br>再听一遍 🔊，重新跟读中…（点击打分按钮可停止）`;
-      setTimeout(()=>{ if(_checkState)_runCheck(btn); },600);
+  if(!status){ status=document.createElement("div"); status.className="check-status cn"; status.style.marginTop="6px"; msgEl.appendChild(status); }
+  if(!(state.xfAppid&&state.xfKey&&state.xfSecret)){
+    status.innerHTML="⚠️ 请先在 ⚙️ 设置 里填入讯飞 APPID / APIKey / APISecret";
+    return;
+  }
+  _checkState={target,btn,status};
+  doIse(target,status,1);
+}
+/* 录音并转 16k 单声道 PCM */
+function recordPcm(ms){
+  return new Promise(async(resolve,reject)=>{
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
+      const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+      await ctx.resume();
+      const src=ctx.createMediaStreamSource(stream);
+      const chunks=[];
+      const proc=ctx.createScriptProcessor(4096,1,1);
+      proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      src.connect(proc); proc.connect(ctx.destination);
+      setTimeout(()=>{
+        try{proc.disconnect();src.disconnect();}catch(e){}
+        stream.getTracks().forEach(t=>t.stop());
+        try{ctx.close();}catch(e){}
+        const total=chunks.reduce((a,c)=>a+c.length,0);
+        const pcm=new Int16Array(total); let o=0;
+        for(const c of chunks){ for(let i=0;i<c.length;i++){ const s=Math.max(-1,Math.min(1,c[i])); pcm[o++]=s<0?s*0x8000:s*0x7fff; } }
+        resolve(pcm);
+      },ms);
+    }catch(e){ reject(e); }
+  });
+}
+function b64(bytes){
+  let s=""; const u=new Uint8Array(bytes);
+  const CH=0x8000;
+  for(let i=0;i<u.length;i+=CH) s+=String.fromCharCode.apply(null,u.subarray(i,i+CH));
+  return btoa(s);
+}
+async function iseSign(){
+  const HOST="ise-api.xfyun.cn", PATH="/v2/open-ise";
+  const date=new Date().toUTCString();
+  const origin=`host: ${HOST}\ndate: ${date}\nGET ${PATH} HTTP/1.1`;
+  const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(state.xfSecret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const sigBuf=new Uint8Array(await crypto.subtle.sign("HMAC",k,new TextEncoder().encode(origin)));
+  let sigs=""; sigBuf.forEach(b=>sigs+=String.fromCharCode(b));
+  const auth= btoa(`api_key="${state.xfKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${btoa(sigs)}"`);
+  return `wss://${HOST}${PATH}?authorization=${encodeURIComponent(auth)}&date=${encodeURIComponent(date)}&host=${HOST}`;
+}
+async function doIse(target,status,attempt){
+  status.innerHTML=`🎙️ 第${attempt}次：请跟读 —— <b>${escapeHtml(target)}</b>`;
+  let pcm;
+  try{ pcm=await recordPcm(5000); }catch(e){ status.innerHTML="❌ 麦克风不可用，请允许权限"; _checkState=null; return; }
+  status.innerHTML="🔍 正在评测你的发音…";
+  let result;
+  try{ result=await iseScore(pcm,target); }
+  catch(e){ status.innerHTML="评测失败："+escapeHtml(String(e.message||e)).slice(0,80); _checkState=null; return; }
+  if(!_checkState)return;
+  if(result.error){ status.innerHTML="评测失败："+escapeHtml(result.error); _checkState=null; return; }
+  const score=result.total;
+  if(score>=75){
+    status.innerHTML=`✅ <b style="color:#15803d">${score} 分（流利度${result.fluency} 准确度${result.accuracy} 完整度${result.integrity}）</b><br><span style="color:#15803d">读得很棒，可以继续下一句了！</span>`;
+    _checkState=null;
+    speak("Great job! Well done!");
+  }else{
+    let bad="";
+    if(result.words&&result.words.length){
+      const wrong=result.words.filter(w=>w.score<60).map(w=>w.word);
+      if(wrong.length) bad=`<br>⚠️ 需要重点练的词：<b style="color:#dc2626">${wrong.map(escapeHtml).join(", ")}</b>`;
     }
-  };
-  rec.onend=()=>{ if(_checkState)setTimeout(()=>{try{rec.start();}catch(e){}},300); };
-  rec.onerror=()=>{ if(_checkState){status.innerHTML="没听清，再试一次（或用打分按钮停止）"; } };
-  try{rec.start();}catch(e){}
+    status.innerHTML=`❌ ${score} 分（流利度${result.fluency} 准确度${result.accuracy} 完整度${result.integrity}）${bad}<br>再听一遍 🔊 后重新跟读…（点打分按钮可停止）`;
+    speak(target);
+    setTimeout(()=>{ if(_checkState) doIse(target,status,attempt+1); },2200);
+  }
+}
+function iseScore(pcm,text){
+  return new Promise((resolve,reject)=>{
+    iseSign().then(url=>{
+      let ws;
+      try{ ws=new WebSocket(url); }catch(e){ return reject(e); }
+      const timer=setTimeout(()=>{ try{ws.close();}catch(e){} reject(new Error("讯飞连接超时")); },40000);
+      let finalJson=null, doneData="";
+      ws.onopen=()=>{
+        // 每 5 秒最多前 32000 个样本（64KB）作为首帧，其余分片发送
+        const frame=pcm.length>32000? pcm.subarray(0,32000) : pcm;
+        const first={
+          business:{sub:"ise",ent:"en_vip",category:"read_sentence",cmd:"ssb",text:"\uFEFF"+text,
+            auf:"audio/L16;rate=16000",aue:"raw",ttp_skip:"true",plev:"0",app_id:state.xfAppid},
+          data:{status:0,data:b64(frame.buffer)}
+        };
+        ws.send(JSON.stringify(first));
+        // 剩余音频分片（每片 2560 字节）
+        const total=pcm.length; let off=frame.length;
+        const sendNext=()=>{
+          if(off>=total){ ws.send(JSON.stringify({data:{status:2,data:""}})); return; }
+          const end=Math.min(off+1280,total);
+          const slice=pcm.subarray(off,end); off=end;
+          ws.send(JSON.stringify({data:{status:1,data:b64(slice.buffer)}}));
+          setTimeout(sendNext,40);
+        };
+        if(frame.length>=32000) ws.send(JSON.stringify({data:{status:2,data:""}}));
+        else sendNext();
+      };
+      ws.onmessage=ev=>{
+        let msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
+        if(msg.code!==0&&msg.code!==undefined){
+          clearTimeout(timer);
+          try{ ws.close(); }catch(e){}
+          return reject(new Error("code "+msg.code+": "+(msg.message||"").slice(0,60)));
+        }
+        if(msg.data&&msg.data.data) doneData+=msg.data.data;
+        if(msg.data&&msg.data.status===2){
+          clearTimeout(timer);
+          try{ ws.close(); }catch(e){}
+          try{
+            const txt=atob(doneData);
+            const obj=JSON.parse(txt);
+            const r=obj.data&&obj.data.read_sentence || obj.read_sentence;
+            if(!r) return resolve({error:"无评测结果"});
+            const info=r.info||{};
+            resolve({
+              total: Math.round(Number(info.total_score)||0),
+              fluency: Math.round(Number(info.fluency_score)||0),
+              accuracy: Math.round(Number(info.accuracy_score)||0),
+              integrity: Math.round(Number(info.integrity_score)||0),
+              words: (r.word||[]).map(w=>({word:w.content, score:Math.round(Number(w.scores&&w.scores.total_score)||0)}))
+            });
+          }catch(e){ reject(new Error("结果解析失败")); }
+        }
+      };
+      ws.onerror=()=>{ clearTimeout(timer); reject(new Error("讯飞连接失败，请检查三个参数")); };
+    }).catch(reject);
+  });
 }
 /* ================= 自由学模式 ================= */
 function openFree(){
@@ -745,6 +856,9 @@ function freeMic(){
 }
 document.getElementById("apiKey").value=state.key;
 document.getElementById("rate").value=state.rate;
+document.getElementById("xfAppid").value=state.xfAppid;
+document.getElementById("xfKey").value=state.xfKey;
+document.getElementById("xfSecret").value=state.xfSecret;
 renderScenes();
 </script>
 </body>

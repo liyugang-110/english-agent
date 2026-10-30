@@ -395,14 +395,29 @@ async function getIpa(text){
   try{
     const d=await (await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(w))).json();
     let ipa=Array.isArray(d)?(d[0].phonetic||(d[0].phonetics.find(p=>p.text)||{}).text||""):"";
-    ipa=ipa.replace(/\/+/g,"");
+    ipa=ipa.replace(/\/+/g,"").replace(/[!?.,;:"()\[\]0-9]/g,"").trim();
     _ipaCache[w]=ipa; return ipa;
   }catch(e){ _ipaCache[w]=""; return ""; }
+}
+/* 短语/整句音标：逐词查询后拼接（查不到的词保留原词小写） */
+const _ipaPhraseCache={};
+async function getIpaPhrase(text){
+  const key=(text||"").trim().toLowerCase();
+  if(_ipaPhraseCache[key]!==undefined)return _ipaPhraseCache[key];
+  const words=(text||"").match(/[A-Za-z']+/g)||[];
+  if(!words.length)return "";
+  const ipas=await Promise.all(words.map(w=>getIpa(w)));
+  const out=words.map((w,i)=>{
+    const p=(ipas[i]||"").trim();
+    return p||w.toLowerCase();
+  });
+  const r=out.join(" ").trim();
+  _ipaPhraseCache[key]=r; return r;
 }
 /* 词条行：英文+音标(异步)+中文+慢速/正常按钮 */
 function vocabLine(en,cn){
   const uid="v"+Math.random().toString(36).slice(2,8);
-  setTimeout(()=>{ getIpa(en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },50);
+  setTimeout(()=>{ getIpaPhrase(en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },50);
   const safe=en.replace(/'/g,"\\'");
   return `<div class="vocab-item"><span class="en speaker" onclick="speak('${safe}')">🔊 ${en}</span> — ${cn}
     <span id="${uid}" style="font-size:11px;color:var(--primary);font-family:serif;"></span>
@@ -872,7 +887,7 @@ function attachDrillCard(msgEl,drillRaw){
         <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 10px;font-size:11px;border:none;" onclick="speak('${safe}',0.7)">🐢 慢速</button>
         <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 10px;font-size:11px;border:none;" onclick="speak('${safe}')">▶️ 正常</button>
       </div></div>`;
-    setTimeout(()=>{ getIpa(p.en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },80);
+    setTimeout(()=>{ getIpaPhrase(p.en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },80);
   });
   bar.innerHTML=`<div class="drill-guide" style="font-size:12px;color:#3b56d9;margin-bottom:4px;">👩‍🏫 ${escapeHtml(d.guide||"跟我读：")}</div>${rows}`;
   msgEl.appendChild(bar);

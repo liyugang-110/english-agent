@@ -202,95 +202,119 @@
 const SCENES = [
  {id:"greet", month:1, emoji:"👋", title:"打招呼与自我介绍", goal:"介绍自己的名字、来自哪里、做什么工作",
   vocab:[["hello / hi","你好"],["nice to meet you","很高兴认识你"],["my name is…","我叫……"],["I'm from…","我来自……"],["I work as…","我做……工作"],["How are you?","你好吗"],["Where are you from?","你来自哪里"],["What do you do?","你是做什么的"]],
+  open:["Hi! I'm Tom. I just moved to Beijing. Nice to meet you!","你好！我是汤姆，刚搬到北京。很高兴认识你！","Hi! Nice to meet you. My name is Li Ming.","你好！很高兴认识你，我叫李明。"],
   sentences:[["Hi! Nice to meet you.","你好！很高兴认识你。"],["My name is Li Ming. I'm from Beijing.","我叫李明，来自北京。"],["I work as a teacher. What about you?","我是老师，你呢？"],["How long have you been here?","你来这里多久了？"],["It was nice talking to you!","跟你聊天很开心！"]]},
  {id:"restaurant", month:1, emoji:"🍜", title:"餐厅服务", goal:"你是服务员：招呼客人、推荐菜、点单、结账",
   role:"You are a foreign customer in a Chinese restaurant. You ONLY speak English. You are hungry, want to order food, ask what the waiter recommends (you can't read the Chinese menu), ask about spice level, and pay at the end. You never speak Chinese.",
   vocab:[["Welcome! Please sit down","欢迎光临，请坐"],["Are you ready to order?","可以点餐了吗"],["What do you recommend?","（教客人问）你推荐什么？"],["It's beef with noodles","是牛肉面"],["Is it spicy?","辣吗"],["Anything to drink?","要喝的吗"],["The bill, please","（教客人说）结账"],["Altogether 88 yuan","一共88元"]],
+  open:["Hi! A table for one. I'm so hungry — what do you recommend?","你好！一位。我太饿了，有什么推荐的吗？","Welcome! Here's the menu. The beef noodles are very popular.","欢迎光临！这是菜单，牛肉面很受欢迎。"],
   sentences:[["Welcome! Here's the menu. Are you ready to order?","欢迎光临！这是菜单，可以点餐了吗？"],["I recommend the beef noodles. It's not spicy.","我推荐牛肉面，不辣。"],["Would you like anything to drink?","要喝点什么吗？"],["OK, one beef noodles and one tea. Just a moment.","好的，一份牛肉面一杯茶，稍等。"],["Altogether 88 yuan. Card or cash?","一共88元，刷卡还是现金？"]]},
  {id:"directions", month:1, emoji:"🗺️", title:"给老外指路", goal:"你是热心的本地人：听懂老外问路、指路、推荐交通方式",
   role:"You are a foreign tourist in China who ONLY speaks English. You are lost or looking for places (subway station, bank, bathroom, a famous street). Ask the local person for directions. Sometimes you don't understand the first time and ask again. You never speak Chinese.",
   vocab:[["Where do you want to go?","你想去哪"],["Go straight","直走"],["Turn left / right","左转/右转"],["It's about 500 meters","大约500米"],["You can take the subway","可以坐地铁"],["Get off at…站","在……站下车"],["It's near / far","很近/很远"],["This way, please","这边请"]],
+  open:["Excuse me, could you help me? I'm lost.","打扰一下，能帮帮我吗？我迷路了。","Sure, I can help. Where do you want to go?","好的，我帮你。你想去哪？"],
   sentences:[["Sure, I can help. Where do you want to go?","好的，我帮你。你想去哪？"],["Go straight for about 500 meters, then turn left.","直走大约500米，然后左转。"],["You can take Subway Line 2 and get off at People's Square.","你可以坐2号线，在人民广场下车。"],["It's too far to walk. You should take a taxi.","走路太远了，你应该打车。"],["This way, please. I'll show you.","这边请，我带你去。"]]},
  {id:"shopping", month:1, emoji:"🛍️", title:"购物接待", goal:"你是售货员：招呼顾客、介绍商品、报价、收钱",
   role:"You are a foreign tourist customer in a Chinese shop. You ONLY speak English. You want to buy things (clothes, souvenirs, tea, etc). Ask about products, prices, sizes, payment. Sometimes bargain. You never speak Chinese.",
   vocab:[["Can I help you?","需要帮忙吗"],["What are you looking for?","你想买什么"],["This one is…","这个是……"],["It's 100 yuan","100元"],["How about this one?","这个怎么样"],["We take card / cash","可以刷卡/现金"],["It's on sale","在打折"],["Try it on","试试看"]],
+  open:["Excuse me, do you speak English? I'm looking for a souvenir.","打扰一下，你会说英语吗？我想买个纪念品。","Hello! Can I help you find anything? We have lots of souvenirs.","你好！需要帮你找什么吗？我们有很多纪念品。"],
   sentences:[["Hello! Can I help you find anything?","你好！需要帮你找什么吗？"],["What size do you need?","你需要什么尺码？"],["This one is 100 yuan. It's very popular.","这个100元，很受欢迎。"],["How about this one? It's on sale, 20% off.","这个怎么样？打八折。"],["That's 150 altogether. Card or cash?","一共150元，刷卡还是现金？"]]},
  {id:"hotel", month:2, emoji:"🏨", title:"酒店前台", goal:"你是前台：帮客人办入住、回应要求、办理退房",
   role:"You are a foreign guest checking in at a Chinese hotel. You ONLY speak English. You have a booking, ask about breakfast and Wi-Fi, request extra items (towels, adapter), maybe complain about the air conditioner, and check out. You never speak Chinese.",
   vocab:[["Do you have a reservation?","您有预订吗"],["May I see your passport?","能看下护照吗"],["Fill in this form","填一下这张表"],["breakfast is from 7 to 10","早餐7点到10点"],["The Wi-Fi password is…","WiFi密码是……"],["check-out time is 12","退房时间是12点"],["Here's your key card","这是您的房卡"],["How was your stay?","住得怎么样"]],
+  open:["Hello, I'd like to check in, please.","你好，我想办理入住。","Welcome! Do you have a reservation?","欢迎光临！您有预订吗？"],
   sentences:[["Welcome! Do you have a reservation?","欢迎光临！您有预订吗？"],["May I see your passport, please?","请出示您的护照。"],["Breakfast is from 7 to 10, on the second floor.","早餐7点到10点，在二楼。"],["The Wi-Fi password is 88888888.","WiFi密码是88888888。"],["Here's your key card, Room 506. Enjoy your stay!","这是您的房卡，506房，祝您住得愉快！"]]},
  {id:"airport", month:2, emoji:"✈️", title:"机场服务", goal:"你是地勤/志愿者：帮老外值机、指路、处理延误",
   role:"You are a foreign traveler at a Chinese airport who ONLY speaks English. Ask the ground staff for help: checking in, baggage, finding the gate, flight delay, lost items. You never speak Chinese.",
   vocab:[["May I see your ticket?","请出示机票"],["Put your bag here","把包放这里"],["window or aisle seat","靠窗还是靠过道"],["Boarding is at 9:30","9:30开始登机"],["Gate 12, turn right","12号登机口，右转"],["The flight is delayed","航班延误了"],["Your bag is overweight","你的行李超重了"],["Have a nice trip","祝旅途愉快"]],
+  open:["Good morning! I'd like to check in for flight CA866 to Shanghai.","早上好！我想办理 CA866 去上海的航班值机。","Good morning! May I see your ticket and passport?","早上好！请出示您的机票和护照。"],
   sentences:[["Good morning! May I see your ticket and passport?","早上好！请出示机票和护照。"],["Do you have any bags to check?","您有行李要托运吗？"],["Window or aisle seat?","您要靠窗还是靠过道的座位？"],["Boarding starts at 9:30, at Gate 12.","9点30分在12号登机口登机。"],["The flight is delayed for one hour. Sorry about that.","航班延误一小时，非常抱歉。"]]},
  {id:"doctor", month:2, emoji:"🏥", title:"药店帮忙", goal:"你是药店店员：听懂老外的症状、推荐药品、说明用法",
   role:"You are a foreigner in a Chinese pharmacy who ONLY speaks English. You feel sick: headache, fever, cough, stomachache, allergy. Describe your symptoms, ask what medicine to take, ask how to use it and the price. You never speak Chinese.",
   vocab:[["What's wrong?","你怎么了"],["I have a…","（教客人说）我头疼/发烧…"],["How long have you been like this?","这样多久了"],["This medicine is for…","这个药是治……"],["Take it twice a day","一天吃两次"],["After meals","饭后吃"],["That's 25 yuan","25元"],["Drink more water","多喝水"]],
+  open:["Excuse me, I don't feel well. Can you help me?","打扰一下，我不太舒服，能帮我吗？","Hello, what's wrong? How can I help?","你好，哪里不舒服？"],
   sentences:[["Hello, what's wrong? How can I help?","你好，哪里不舒服？"],["How long have you felt like this?","你这样多久了？"],["This medicine is for fever. Take it twice a day after meals.","这个药治发烧，一天两次，饭后吃。"],["Don't worry, it's not serious. Drink more water.","别担心，不严重，多喝水。"],["That's 25 yuan altogether. Get well soon!","一共25元，祝早日康复！"]]},
  {id:"smalltalk", month:2, emoji:"🌤️", title:"闲聊：天气与爱好", goal:"和老外寒暄聊日常",
   vocab:[["lovely day, isn't it?","天气真好，是吧"],["hobby","爱好"],["I love…","我喜欢……"],["on weekends","周末"],["Do you like…?","你喜欢……吗"],["music / movies / sports","音乐/电影/运动"],["How about you?","你呢"],["sounds fun","听起来很有趣"]],
+  open:["Lovely weather today, isn't it?","今天天气真好，对吧？","Yeah, it is! Perfect for a walk, isn't it?","是啊！特别适合出去走走，你说呢？"],
   sentences:[["Lovely weather today, isn't it?","今天天气真好，对吧？"],["What do you like to do on weekends?","你周末喜欢做什么？"],["I love hiking and taking photos.","我喜欢徒步和拍照。"],["What kind of music do you like?","你喜欢什么音乐？"],["That sounds fun! We should go together sometime.","听起来很有趣！改天一起去吧。"]]},
  {id:"opinions", month:3, emoji:"💬", title:"表达观点", goal:"表达同意/不同意并说明理由",
   vocab:[["I think / I believe…","我认为……"],["In my opinion…","在我看来……"],["I agree / I disagree","我同意/不同意"],["That's a good point","说得有道理"],["because / so","因为/所以"],["It depends","看情况"],["What do you think?","你怎么看"],["exactly!","正是！"]],
+  open:["Hi, can I ask you something? What do you think about working from home?","嗨，能问你个问题吗？你怎么看远程办公？","In my opinion, it depends on the situation.","在我看来，这要看情况。"],
   sentences:[["In my opinion, it depends on the situation.","在我看来，这要看情况。"],["I agree with you, but there's one thing…","我同意你，但有一点……"],["That's a good point. I hadn't thought about it.","说得有道理，我没想过这一点。"],["I see it a little differently.","我的看法稍微不同。"],["What do you think about it?","你对此怎么看？"]]},
  {id:"party", month:3, emoji:"🎉", title:"聚会与社交", goal:"融入话题、敬酒、告别",
   vocab:[["Help yourself","随便吃/自便"],["This is my friend…","这是我朋友……"],["Cheers!","干杯！"],["Have you tried…?","你尝过……吗"],["great party!","派对真棒"],["I had a great time","我玩得很开心"],["Let's keep in touch","保持联系"],["It's getting late","时间不早了"]],
+  open:["Hi! I'm Sarah, David's friend. Have you tried the food here? It's amazing!","你好！我是萨拉，大卫的朋友。你尝过这里的菜吗？超好吃！","Yeah, it's amazing! Cheers to new friends!","是啊，超好吃！为新朋友干杯！"],
   sentences:[["Have you tried the food here? It's amazing!","你尝过这里的菜吗？超好吃！"],["Anna, this is my friend David.","安娜，这是我朋友大卫。"],["Cheers to new friends!","为新朋友干杯！"],["I had a great time tonight.","今晚我玩得很开心。"],["Let's keep in touch!","保持联系哦！"]]},
  {id:"appointment", month:3, emoji:"📅", title:"预约与改约", goal:"约时间、改时间、取消",
   vocab:[["Are you free on…?","你……有空吗"],["How about Friday?","周五怎么样"],["reschedule","改期"],["I'm afraid I can't make it","我恐怕来不了"],["work for you?","你方便吗"],["Let me check my calendar","我查下日程"],["See you then","到时见"],["sorry for the short notice","临时通知很抱歉"]],
+  open:["Hi, are we still meeting on Friday afternoon?","你好，我们周五下午的见面还定吗？","I'm afraid I can't make it Friday. How about we meet at 3 pm instead?","恐怕周五来不了，改成下午3点怎么样？"],
   sentences:[["Are you free on Friday afternoon?","你周五下午有空吗？"],["How about we meet at 3 pm instead?","改成下午3点见面怎么样？"],["I'm afraid I can't make it tomorrow.","恐怕我明天来不了。"],["Does 10 am work for you?","上午10点你方便吗？"],["Perfect, see you then!","太好了，到时见！"]]},
  {id:"misunderstand", month:3, emoji:"🤝", title:"处理误会与道歉", goal:"道歉、解释、化解尴尬",
   vocab:[["I'm sorry, I didn't catch that","抱歉，我没听清"],["Could you say that again?","能再说一遍吗"],["I didn't mean to…","我不是故意……"],["my bad","我的错"],["no worries","没关系"],["misunderstand","误会"],["I apologize","我道歉"],["let me explain","让我解释一下"]],
+  open:["Wait, that's not what I meant. You got it all wrong!","等等，我不是那个意思，你全理解错了！","Oh, I see. I misunderstood you. I'm sorry!","哦，我明白了，是我误会你了，抱歉！"],
   sentences:[["I'm sorry, I didn't catch that. Could you say it again?","抱歉没听清，能再说一遍吗？"],["Sorry, I didn't mean to interrupt you.","抱歉，我不是故意打断你的。"],["Oh, I see. I misunderstood you.","哦，我明白了，是我误会你了。"],["My bad! I should have checked first.","我的错！我应该先确认的。"],["No worries, it happens to everyone.","没关系，人人都会遇到。"]]},
 
  /* ============ 第 4 类：职业实战（可选进阶关卡，不锁主线） ============ */
  {id:"taxi_pickup", cat:4, emoji:"🚕", title:"出租车：接客与问目的地", goal:"司机：确认目的地、谈价、指路线、报站",
   role:"你是出租车司机，Anna 是外国乘客",
   vocab:[["Where to? / Where are you heading?","去哪儿？"],["Hop in, please.","请上车"],["airport / train station","机场/火车站"],["How much to…?","去……多少钱"],["by meter","打表"],["It takes about 20 minutes.","大概20分钟"],["Here we are.","到了"],["That'll be 45 yuan.","一共45元"]],
+  open:["Hi! Could you take me to the airport?","你好！能送我去机场吗？","Sure, hop in! Terminal 1 or Terminal 2?","好的，请上车！一号航站楼还是二号？"],
   sentences:[["Hi! Where are you heading?","您好！您去哪儿？"],["Sure, hop in. It takes about 20 minutes.","好的，请上车，大概20分钟。"],["No problem, I'll take the highway. It's faster.","没问题，我走高速，快一些。"],["We'll be there in about five minutes.","大概还有5分钟到。"],["Here we are. That'll be 45 yuan, please.","到了，一共45元。"]]},
  {id:"taxi_drive", cat:4, emoji:"🧭", title:"出租车：路上聊天与推荐", goal:"司机：跟乘客寒暄、推荐景点美食、处理路线分歧",
   role:"你是出租车司机，Anna 是外国乘客",
   vocab:[["first time here?","第一次来吗"],["Is this your first time in China?","你是第一次来中国吗"],["sights","景点"],["local food","本地美食"],["I recommend…","我推荐……"],["traffic jam","堵车"],["Should I take another route?","要换条路吗"],["Enjoy your stay!","祝你玩得愉快"]],
+  open:["It's my first time in Beijing. What food should I try?","我第一次来北京，该尝尝什么吃的？","If you have time, you should try Peking duck.","如果有时间，你应该尝尝北京烤鸭。"],
   sentences:[["Is this your first time in Beijing?","这是你第一次来北京吗？"],["If you have time, you should try Peking duck.","如果有时间，你应该尝尝北京烤鸭。"],["There's a traffic jam ahead. Should I take another route?","前面堵车，要换条路吗？"],["The Forbidden City is very close to your hotel.","故宫离你酒店很近。"],["Enjoy your stay in China!","祝你在中国的旅途愉快！"]]},
  {id:"taxi_pay", cat:4, emoji:"💳", title:"出租车：付款与发票问题", goal:"司机：处理付款、找零、发票、乘客投诉",
   role:"你是出租车司机，Anna 是外国乘客",
   vocab:[["cash or mobile pay?","现金还是手机支付"],["scan the QR code","扫二维码"],["Here's your change.","这是找您的钱"],["receipt / invoice","小票/发票"],["card machine","刷卡机"],["keep the change","零钱不用找了"],["I'm sorry about that.","对此很抱歉"],["No, that's the total.","不，这就是总价"]],
+  open:["How much is it? And can I get a receipt?","多少钱？能给我张发票吗？","That'll be 45 yuan. Here's your receipt.","一共45元，这是您的发票。"],
   sentences:[["Cash or mobile pay? You can scan this QR code.","现金还是手机支付？可以扫这个二维码。"],["Here's your change and your receipt.","这是找您的钱和小票。"],["Oh, you can keep the change. Thank you!","哦，零钱不用找了，谢谢！"],["I'm sorry, the card machine is broken today.","抱歉，今天刷卡机坏了。"],["No, that's the total price including the toll.","不，这是含过路费的总价。"]]},
  {id:"guide_welcome", cat:4, emoji:"📣", title:"导游：接团开场与行程介绍", goal:"导游：欢迎词、行程安排、集合时间地点",
   role:"你是导游，Anna 是外国游客团的成员",
   vocab:[["Welcome to…","欢迎来到……"],["I'll be your guide.","我是你们的导游"],["Itinerary","行程安排"],["meet back here at 5","5点在这里集合"],["stay with the group","跟紧团队"],["tickets are included","门票已含"],["Feel free to ask me anything.","有问题随时问我"],["restroom / toilet","洗手间"]],
+  open:["Hi, is this the Xi'an city tour group?","你好，是西安市区游的团吗？","Welcome to Xi'an! I'll be your guide today.","欢迎来到西安！今天由我担任大家的导游。"],
   sentences:[["Welcome to Xi'an! I'll be your guide today.","欢迎来到西安！今天我担任大家的导游。"],["Here's our itinerary for today.","这是我们今天的行程安排。"],["Please meet back here at 5 pm.","请在下午5点回到这里集合。"],["Tickets are included, so just follow me.","门票已包含，跟着我走就行。"],["Feel free to ask me anything along the way.","路上有任何问题都可以问我。"]]},
  {id:"guide_intro", cat:4, emoji:"🏛️", title:"导游：景点讲解与历史介绍", goal:"导游：介绍景点、讲历史故事、回答提问",
   role:"你是导游，Anna 是外国游客",
   vocab:[["was built in…","建于……年"],["It's over 600 years old.","它有600多年历史"],["dynasty","朝代"],["emperor","皇帝"],["symbol of…","……的象征"],["stand for","代表/象征"],["legend has it that…","传说……"],["Any questions?","有提问吗"]],
+  open:["Wow, this palace is amazing! How old is it?","哇，这座宫殿太棒了！有多少年历史了？","This palace was built in 1420, over 600 years ago.","这座宫殿建于1420年，已有600多年历史。"],
   sentences:[["This palace was built in 1420, over 600 years ago.","这座宫殿建于1420年，已有600多年历史。"],["It was the home of the emperors in the Ming dynasty.","这是明朝皇帝居住的地方。"],["The dragon is a symbol of power in Chinese culture.","龙在中国文化中象征权力。"],["Legend has it that the well was used by the emperor himself.","传说这口井是皇帝亲自使用过的。"],["Does anyone have any questions?","有谁想问问题吗？"]]},
  {id:"guide_help", cat:4, emoji:"🧳", title:"导游：处理游客需求与突发情况", goal:"导游：走失、身体不适、购物点、时间延误",
   role:"你是导游，Anna 是外国游客",
   vocab:[["Are you OK?","你还好吗"],["She got separated from the group.","她走散了"],["Take a rest here.","在这里休息一下"],["a doctor / the hospital","医生/医院"],["We're running late.","我们时间晚了"],["souvenir shop","纪念品商店"],["Let me call the office.","我打个电话给公司"],["I'll take care of it.","我来处理"]],
+  open:["Excuse me, I feel a bit dizzy. Is there somewhere to sit?","打扰一下，我有点头晕，有地方坐吗？","Are you okay? Let's take a rest here.","你还好吗？我们在这里休息一下吧。"],
   sentences:[["Are you okay? You look tired. Let's take a rest here.","你还好吗？看起来有点累，我们在这里休息一下。"],["Don't worry, one of our guests got separated. We'll find her.","别担心，有位客人走散了，我们会找到她。"],["We're running a bit late, so please hurry.","我们有点超时了，请大家快一点。"],["There's a souvenir shop over there if you'd like to look.","那边有纪念品店，可以看看。"],["Let me call the office and take care of it.","我打个电话给公司处理一下。"]]},
  {id:"creator_intro", cat:4, emoji:"🎬", title:"短视频博主：自我介绍与账号定位", goal:"博主：开场打招呼、说清账号主题、求关注",
   role:"Anna 是你的观众/同行，练习拍视频时的口播",
   vocab:[["Hey guys!","大家好"],["Welcome back to my channel.","欢迎回到我的频道"],["In this video, I'll show you…","这期视频我带你……"],["If you like this, hit follow.","喜欢就关注我"],["subscribe","订阅"],["food / travel / vlog","美食/旅行/日常"],["Let me know in the comments.","评论区告诉我"],["See you in the next one.","下期见"]],
+  open:["Hey, I just saw your video. What's your channel about?","嘿，我刚看了你的视频，你的账号是做什么的？","Hey guys, welcome! My channel takes you to hidden food places in China.","大家好，欢迎！我的频道带你寻找中国的隐藏美食。"],
   sentences:[["Hey guys, welcome back to my channel!","大家好，欢迎回到我的频道！"],["In this video, I'll take you to a hidden noodle place in Chengdu.","这期视频，我带你去成都一家隐藏的面馆。"],["If you like this kind of content, hit follow!","如果你喜欢这类内容，记得关注我！"],["Let me know in the comments what you want to see next.","评论区告诉我你想看什么。"],["Thanks for watching, see you in the next one!","感谢观看，下期见！"]]},
  {id:"creator_describe", cat:4, emoji:"🥟", title:"短视频博主：介绍美食与文化", goal:"博主：描述味道口感、讲做法、讲文化背景",
   role:"Anna 是你的观众，练习介绍中国美食",
   vocab:[["It tastes…","它尝起来……"],["spicy / crispy / chewy","辣/脆/有嚼劲"],["texture","口感"],["made of…","由……做成"],["dough","面团"],["steamed / fried","蒸的/煎的"],["It's a must-try.","一定要试试"],["It costs about 10 yuan.","大概10块钱"]],
+  open:["These look amazing! What are they called?","这些看起来太棒了！叫什么名字？","These are soup dumplings, made of pork and soup inside.","这是小笼包，里面有猪肉和汤汁。"],
   sentences:[["These are soup dumplings, and they're made of pork and soup inside.","这是小笼包，里面有猪肉和汤汁。"],["It tastes a little spicy but very fresh.","尝起来有点辣，但很鲜。"],["The outside is crispy and the inside is soft.","外面酥脆，里面柔软。"],["It's only about 10 yuan, so it's a must-try.","只要约10块钱，一定要试试。"],["This dish is usually eaten during the Spring Festival.","这道菜通常在春节吃。"]]},
  {id:"creator_live", cat:4, emoji:"📡", title:"直播：开场留人与互动", goal:"主播：直播开场、欢迎观众、留住人、引导互动",
   role:"Anna 是你的直播观众，在评论区跟你互动",
   vocab:[["Welcome to my live!","欢迎来到我的直播间"],["Thanks for joining!","感谢加入"],["Just joined?","刚进来的吗"],["Like the stream","点个赞"],["Say hi in the chat.","在评论区打个招呼"],["Stay tuned","别走开"],["I'm going live every night at 8.","我每晚8点直播"],["shout out to…","为……打call/点名"]],
+  open:["Hi, first time here! What are we watching today?","嗨，第一次来！今天看什么？","Welcome! Thanks for joining — say hi in the chat!","欢迎！感谢加入——在评论区打个招呼吧！"],
   sentences:[["Hi everyone, welcome to my live stream!","大家好，欢迎来到我的直播间！"],["Thanks for joining me tonight, guys!","谢谢大家今晚来陪我！"],["If you just joined, say hi in the chat!","刚进来的朋友，在评论区打个招呼！"],["Stay tuned, because I'm going to show you something cool.","别走开，马上给你们看点有意思的。"],["Shout out to Anna for the gift, thank you!","谢谢 Anna 的礼物，感谢！"]]},
  {id:"creator_sell", cat:4, emoji:"🛒", title:"直播带货：介绍与促单", goal:"主播：讲卖点、报价格、催单、回答疑问",
   role:"Anna 是你的直播间顾客，正在犹豫买不买",
   vocab:[["This one is selling fast.","这款卖得很快"],["Only 20 left!","只剩20件"],["original price / today's price","原价/今天价"],["It's 30% off.","打七折"],["link in the cart","购物车链接"],["free shipping","包邮"],["any questions?","有问题吗"],["grab it now","赶紧下单"]],
+  open:["How much is this one? Is shipping free?","这个多少钱？包邮吗？","The original price is 200, but today it's only 99, free shipping!","原价200，今天只要99，还包邮！"],
   sentences:[["This one is selling fast, only 20 left!","这款卖得很快，只剩20件了！"],["The original price is 200, but today it's only 99.","原价200，今天只要99。"],["It's free shipping, and you can return it in 7 days.","包邮，而且7天可退。"],["Click the link in the cart to grab it now.","点购物车链接，赶紧下单。"],["Any questions? Just type them in the chat.","有问题吗？直接在评论区打出来。"]]},
  {id:"creator_collab", cat:4, emoji:"🤝", title:"博主：联系品牌与合作洽谈", goal:"博主：自我介绍数据、谈合作形式、报价",
   role:"Anna 是品牌方，正在和你谈合作",
   vocab:[["Thanks for reaching out.","感谢联系我"],["my channel has…","我的频道有……"],["engagement rate","互动率"],["a sponsored video","一条商单视频"],["My rate is…","我的报价是……"],["deliverables","交付内容"],["timeline","时间安排"],["looking forward to it","期待合作"]],
+  open:["Hello! We love your content. Do you do sponsored videos?","你好！我们很喜欢你的内容。你接商单视频吗？","Thanks for reaching out! My channel has 200k followers on TikTok.","感谢联系我！我在 TikTok 有20万粉丝。"],
   sentences:[["Thanks for reaching out! My channel has 200k followers on TikTok.","感谢联系我！我在 TikTok 有20万粉丝。"],["I usually do one sponsored video plus two stories.","我通常做一条商单视频加两条动态。"],["My rate for a dedicated video is 800 dollars.","一条专属视频的报价是800美元。"],["Could you send me the brief and timeline?","能把需求文档和时间安排发我吗？"],["Sounds good, looking forward to working with you!","听起来不错，期待合作！"]]},
  {id:"creator_comment", cat:4, emoji:"💌", title:"博主：回复评论与粉丝互动", goal:"博主：回应夸赞、解释质疑、处理差评",
   role:"Anna 是你的粉丝，在评论区给你留言",
   vocab:[["Thanks so much for your support!","非常感谢你的支持"],["Glad you liked it!","很高兴你喜欢"],["I see your point.","我理解你的意思"],["Just to clarify…","我澄清一下……"],["Thanks for the feedback.","感谢反馈"],["I'll try that next time.","下次我会试试"],["Sorry for the confusion.","抱歉造成误会"],["You're the best!","你最棒"]],
+  open:["Hey, loved the video! But is that place really that cheap?","嘿，很喜欢这期！那地方真有那么便宜吗？","Glad you liked it! Yes, I paid for it myself — it's really that cheap.","很高兴你喜欢！是我自己买单的，真的那么便宜。"],
   sentences:[["Thanks so much for your support, it means a lot!","非常感谢你的支持，这对我很重要！"],["Glad you liked the video! More coming soon.","很高兴你喜欢这期视频！很快还有更多。"],["I see your point, but just to clarify, I paid for it myself.","我理解你的意思，不过澄清一下，这是我自己买的。"],["Thanks for the feedback, I'll try that next time.","感谢反馈，下次我会试试。"],["Sorry for the confusion, let me explain in the next video.","抱歉造成误会，我在下期视频里解释。"]]},
 ];
 
@@ -569,7 +593,14 @@ function startChat(){
     tip.textContent="⚠️ 演示模式：请在 ⚙️ 设置 填入 DeepSeek Key，才能获得与场景匹配的真实教学";
     document.getElementById("msgs").appendChild(tip);
   }
-  addMsg("ai","",null,true);
+  const openMsg=addMsg("ai","",null,true);
+  // 开场像两人对话：先读对方的话，再读你的参考回应
+  if(openMsg.dataset.auto){
+    try{
+      const [gEn,rEn]=JSON.parse(decodeURIComponent(openMsg.dataset.auto));
+      speak(gEn,null,true).catch(()=>{}).then(()=>{ speak(rEn,null,true).catch(()=>{}); });
+    }catch(e){}
+  }
 }
 function backToScenes(){
   _pageStack.length=0;
@@ -585,15 +616,21 @@ function addMsg(role,en,cn,isFirst){
     if(isFirst){
       const s=state.current;
       const situa=s.role
-        ?`（情境：${s.title}。对方是不懂中文的${/出租车/.test(s.title)?"乘客":/导游/.test(s.title)?"游客":/博主|直播/.test(s.title)?"观众/客户":"外国人"}，他/她开口了——你要听懂并回应）`
+        ?`（情境：${s.title}。对方是不懂中文的${/出租车/.test(s.title)?"乘客":/导游/.test(s.title)?"游客":/博主|直播/.test(s.title)?"观众/客户":"外国人"}，他/她先开口了——听懂后回应）`
         :`（情境：${s.title}。Anna 扮演外国朋友，先开口说了——听懂后回应他/她）`;
-      const en0=s.sentences[0][0], cn0=s.sentences[0][1], en1=s.sentences[1][0], cn1=s.sentences[1][1];
+      const o=s.open||[s.sentences[0][0],s.sentences[0][1],s.sentences[1][0],s.sentences[1][1]];
+      const gEn=o[0],gCn=o[1],rEn=o[2],rCn=o[3];
       d.innerHTML=`<span class="cn">${escapeHtml(situa)}</span>
-        <div style="margin:8px 0 4px; font-size:16px; font-weight:600; line-height:1.5;">
-          <span class="speaker" onclick="speak('${en0.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(en0)}</div>
-        <span class="cn">🇨🇳 ${escapeHtml(cn0)}</span>
-        <div class="cn" style="margin-top:6px;">听懂了吗？点下面领读学这一句，然后回答 👇</div>`;
-      d.dataset.drill=`先学会对方的第一句，跟我读 || ${en0}|${cn0} || ${en1}|${cn1}`;
+        <div style="margin:8px 0 2px; font-size:12px; color:var(--muted);">🧑 对方说：</div>
+        <div style="font-size:16px; font-weight:600; line-height:1.5;">
+          <span class="speaker" onclick="speak('${gEn.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(gEn)}</div>
+        <span class="cn">🇨🇳 ${escapeHtml(gCn)}</span>
+        <div style="margin:10px 0 2px; font-size:12px; color:#3b56d9;">✏️ 你可以这样回应：</div>
+        <div style="font-size:16px; font-weight:600; line-height:1.5;">
+          <span class="speaker" onclick="speak('${rEn.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(rEn)}</div>
+        <span class="cn">🇨🇳 ${escapeHtml(rCn)}</span>`;
+      d.dataset.drill=`先学会你的回应，跟我读 || ${rEn}|${rCn}`;
+      d.dataset.auto=encodeURIComponent(JSON.stringify([gEn,rEn]));
     }
     else{
       let html="";
@@ -665,12 +702,13 @@ async function sendToAnna(userText){
   const roleLine = state.current.role
     ? `\nROLE PLAY (very important): You play the other side of the scene. ${state.current.role}. The learner is the Chinese service person / host / professional. Stay in character, only speak natural simple English like a real foreigner, keep replies short.`
     : `\nThe learner is a Chinese person who wants to talk with foreigners in China. You play a friendly foreigner who only speaks English.`;
-  const sys=`You are Anna, a friendly, patient English tutor for a Chinese adult beginner learner. Current scenario: "${state.current.title}". Goal: ${state.current.goal}.${roleLine}
+  const openingLine=state.current.open?` The guest has already opened the conversation by saying: "${state.current.open[0]}" (${state.current.open[1]}). Remember this information — never contradict or re-ask it.`:"";
+  const sys=`You are Anna, a friendly, patient English tutor for a Chinese adult beginner learner. Current scenario: "${state.current.title}". Goal: ${state.current.goal}.${roleLine}${openingLine}
 Reply in EXACTLY this 5-part format, plain text, no markdown:
 <In-character English reply, max 2 short simple sentences, then one short follow-up question. EXCEPTION: if the student is asking for help in Chinese (not practicing), this part is instead a direct Chinese answer from the teacher, prefixed with 【老师解答】>
 🇨🇳 <把上面英文逐句翻译成中文>
 📝 Correction: <corrected student sentence> — <one short Chinese sentence explaining the error>. If the student's sentence had no error, write: 没有！说得很棒！
-💡 怎么答: <用中文给思路，然后必须给出一句完整的参考回答，格式固定为：你可以说: "完整的英文句子"。学生词汇量小，没有完整参考句就答不出来。一次只推进一小步（问一个问题），等学生回答后再继续>
+💡 怎么答: <用中文给思路，然后必须给出一句完整的参考回答，格式固定为：你可以说: "完整的英文句子"。参考回答必须顺着客人刚刚说的话往下接（先回应客人给的信息，再推进下一步），绝不能重复问客人已经说过的内容。学生词汇量小，没有完整参考句就答不出来。一次只推进一小步，等学生回答后再继续>
 🎓 领读: <见下方规则>
 
 🎓 领读 规则（像真人老师一样判断）：
@@ -686,6 +724,8 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
 
 Rules:
 - English must be simple (CEFR A1-A2), vocabulary matching a beginner.
+- REALISM (very important): the dialogue must flow exactly like real life. You play the guest/customer, so say natural things a real foreigner would say in that situation. NEVER ask for information the learner (or you yourself) has already given — e.g. if you already said "I have two bags to check", the learner must NOT ask "How many bags do you have?"; their reference answer should respond to it (thank them, take the bags, ask the next missing info like destination or weight). Same for names, flight numbers, food choices, addresses, etc.
+- Each turn moves the scene one small realistic step forward (check-in → bags → seat → gate → payment). Never loop back to a question already answered.
 - In service scenes (the learner plays the service person), teach the learner to CONNECT greeting and service language into one natural sentence, e.g. "Nice to meet you! Can I help you?" — never split them into two separate turns. Your drills and examples must model this connected style.
 - 📝 Correction only points out ONE most important error each turn.
 - If student writes Chinese or can't answer, the English reply gives a partial example and 💡 怎么答 teaches them step by step.

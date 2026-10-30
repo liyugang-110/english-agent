@@ -639,12 +639,14 @@ function addMsg(role,en,cn,isFirst){
       if(parts.cn) html+=`<span class="cn">🇨🇳 ${escapeHtml(parts.cn)}</span>`;
       if(parts.correction) html+=`<div class="correction"><b>📝 纠错：</b>${escapeHtml(parts.correction)}</div>`;
       if(parts.hint){
-        // 提取 "你可以说:" 后的完整参考回答句，加喇叭重播
-        const m=parts.hint.match(/你可以说[:：]\s*["“]?([^"”]+)["”]?/);
+        // 提取 "你可以说:" 后的完整参考回答句（可带括号中文翻译），加喇叭重播
+        const m=parts.hint.match(/你可以说[:：]\s*["“]?([^"”（(]+)["”]?\s*[（(]([^）)]*)[）)]?/);
+        const refTxt=m?m[1].trim():"";
         let hintHtml=`<div class="correction" style="border-color:#4f6ef7;background:#eef2ff;color:#3b56d9"><b>💡 怎么答：</b>${escapeHtml(m?parts.hint.replace(m[0],"").trim():parts.hint)}`;
         if(m){
-          const ref=m[1].trim().replace(/'/g,"\\'");
-          hintHtml+=`<div style="margin-top:6px;font-size:14px;"><b>✏️ 参考回答：</b><span class="speaker" onclick="speak('${ref}')">🔊</span> ${escapeHtml(m[1].trim())}</div>`;
+          const ref=refTxt.replace(/'/g,"\\'");
+          hintHtml+=`<div style="margin-top:6px;font-size:14px;"><b>✏️ 参考回答：</b><span class="speaker" onclick="speak('${ref}')">🔊</span> ${escapeHtml(refTxt)}</div>`;
+          hintHtml+=`<div class="cn" style="margin-top:2px;">🇨🇳 ${escapeHtml(m[2]?m[2].trim():"（意思见上方 💡 说明）")}</div>`;
         }
         hintHtml+=`</div>`;
         html+=hintHtml;
@@ -708,7 +710,7 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
 <In-character English reply, max 2 short simple sentences, then one short follow-up question. EXCEPTION: if the student is asking for help in Chinese (not practicing), this part is instead a direct Chinese answer from the teacher, prefixed with 【老师解答】>
 🇨🇳 <把上面英文逐句翻译成中文>
 📝 Correction: <corrected student sentence> — <one short Chinese sentence explaining the error>. If the student's sentence had no error, write: 没有！说得很棒！
-💡 怎么答: <用中文给思路，然后必须给出一句完整的参考回答，格式固定为：你可以说: "完整的英文句子"。参考回答必须顺着客人刚刚说的话往下接（先回应客人给的信息，再推进下一步），绝不能重复问客人已经说过的内容。学生词汇量小，没有完整参考句就答不出来。一次只推进一小步，等学生回答后再继续>
+💡 怎么答: <用中文给思路，然后必须给出一句完整的参考回答，格式固定为：你可以说: "完整的英文句子"（这句英文的中文翻译）。括号里的中文翻译必须有，学生要看中文才明白意思。参考回答必须顺着客人刚刚说的话往下接（先回应客人给的信息，再推进下一步），绝不能重复问客人已经说过的内容。学生词汇量小，没有完整参考句就答不出来。一次只推进一小步，等学生回答后再继续>
 🎓 领读: <见下方规则>
 
 🎓 领读 规则（像真人老师一样判断）：
@@ -718,7 +720,7 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
   C) 学生说了英文但发音或用法只错了一小处 → 只领读那个出错的词或短语。例如：注意 coffee 的重音在前面 || coffee|咖啡
   D) 学生说得基本正确 → 只挑你(Anna)刚才回答里最关键的 1-2 个词或短语领读，帮学生听懂外国人的话。例如：记住这个关键词 || reservation|预订 || Do you have a reservation?|您有预订吗
   E) 学生用中文问某个词怎么说 → 直接领读那个词或短句
-- 每个英文片段后面必须用 "|" 加上其中文意思，格式固定为：英文片段|中文。没有翻译的领读是不合格的
+- 每个英文片段后面必须用 "|" 加上其中文意思，格式固定为：英文片段|中文。每个片段都要带中文翻译，即使只是 Here you are 也要写 |给您 / 拿去吧 这样口语化的中文。没有翻译的领读是不合格的
 - 英文跟读片段必须短（不超过 8 个单词），用 " || " 分隔
 - 领读片段优先来自你(Anna)的英文回复（学生需要听懂外国人在说什么），其次才是学生该说的目标句。不要凭空编新句子
 
@@ -777,9 +779,11 @@ Rules:
       if(sp){ sp.style.animation="pulse 1.2s infinite"; sp.title="自动播放被拦截，点我播放"; }
       return;
     }
-    // 接着自动朗读参考回答（像听两人对话）
-    const m=(p.hint||"").match(/你可以说[:：]\s*["“]?([^"”]+)["”]?/);
+    // 接着自动朗读参考回答（像听两人对话；忽略括号里的中文）
+    const m=(p.hint||"").match(/你可以说[:：]\s*["“]?([^"”（(]+)["”]?\s*[（(]/);
     if(m&&m[1].trim()) return speak(m[1].trim(),null,true).catch(()=>{});
+    const m2=(p.hint||"").match(/你可以说[:：]\s*["“]?([^"”（(]+)["”]?\s*$/);
+    if(m2&&m2[1].trim()) return speak(m2[1].trim(),null,true).catch(()=>{});
   });
   attachCheckBtn(msgEl,p.reply||reply);
   // 是否通关
@@ -862,7 +866,7 @@ function attachDrillCard(msgEl,drillRaw){
     const uid="d"+Math.random().toString(36).slice(2,8);
     const safe=p.en.replace(/'/g,"\\'");
     rows+=`<div style="margin:6px 0;">
-      <div style="font-size:14px;font-weight:600;"><span class="speaker" onclick="speak('${safe}')">🔊</span> ${escapeHtml(p.en)}${p.cn?` <span style="color:var(--muted);font-weight:400;font-size:12px;">（${escapeHtml(p.cn)}）</span>`:""}</div>
+      <div style="font-size:14px;font-weight:600;"><span class="speaker" onclick="speak('${safe}')">🔊</span> ${escapeHtml(p.en)}${p.cn?` <span style="color:var(--muted);font-weight:400;font-size:12px;">（${escapeHtml(p.cn)}）</span>`:` <span style="color:var(--muted);font-weight:400;font-size:12px;">（意思见上方 🇨🇳 翻译）</span>`}</div>
       <div id="${uid}" style="font-size:11px;color:var(--primary);font-family:serif;"></div>
       <div style="display:flex;gap:6px;margin-top:3px;">
         <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 10px;font-size:11px;border:none;" onclick="speak('${safe}',0.7)">🐢 慢速</button>

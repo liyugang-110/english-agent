@@ -490,12 +490,29 @@ function micBtnUI(){
 }
 
 /* ================= 对话 ================= */
+/* 页面栈：从哪进就返回哪 */
+const _pageStack=[];
+function _currentPageId(){
+  const ids=["scenePage","chatPage","freePage"];
+  return ids.find(id=>{ const el=document.getElementById(id); return el.style.display&&el.style.display!=="none"; })||"scenePage";
+}
+function _showPage(id){
+  ["scenePage","chatPage","freePage"].forEach(p=>{
+    const el=document.getElementById(p);
+    el.style.display=(p===id)?(p==="scenePage"?"block":"flex"):"none";
+  });
+  if(id==="scenePage")renderScenes();
+  window.scrollTo(0,0);
+}
+function goBack(){
+  const prev=_pageStack.pop()||"scenePage";
+  _showPage(prev);
+}
 function startChat(){
   closeModal("sceneModal");
-  document.getElementById("freePage").style.display="none";
+  _pageStack.length=0;
   state.current=currentScene; state.history=[];
-  document.getElementById("scenePage").style.display="none";
-  const cp=document.getElementById("chatPage"); cp.style.display="flex";
+  _showPage("chatPage");
   document.getElementById("chatTitle").textContent="Anna · "+currentScene.title;
   document.getElementById("chatSub").textContent="目标："+currentScene.goal;
   document.getElementById("msgs").innerHTML="";
@@ -509,9 +526,8 @@ function startChat(){
   addMsg("ai","",null,true);
 }
 function backToScenes(){
-  document.getElementById("chatPage").style.display="none";
-  document.getElementById("scenePage").style.display="block";
-  renderScenes();
+  _pageStack.length=0;
+  _showPage("scenePage");
 }
 function addMsg(role,en,cn,isFirst){
   const box=document.getElementById("msgs");
@@ -519,11 +535,17 @@ function addMsg(role,en,cn,isFirst){
   const d=document.createElement("div"); d.className="msg "+role;
   if(role==="ai"){
     if(isFirst){
-      d.innerHTML="Hi! I'm Anna 😊 <span class='cn'>你好，我是 Anna 老师。我们开始练习「"+state.current.title+"」吧！先跟我打个招呼。</span>";
       const s=state.current;
-      d.dataset.drill = s.role
-        ? `问候之后马上接服务用语，一句连着说，跟我读 || ${s.sentences[0][0]}|${s.sentences[0][1]} || ${s.sentences[1][0]}|${s.sentences[1][1]}`
-        : "先听清 nice to meet you 的连读，跟我读 || nice to meet you|很高兴认识你 || Hi Anna, nice to meet you|你好 Anna，很高兴认识你";
+      const situa=s.role
+        ?`（情境：${s.title}。对方是不懂中文的${/出租车/.test(s.title)?"乘客":/导游/.test(s.title)?"游客":/博主|直播/.test(s.title)?"观众/客户":"外国人"}，他/她开口了——你要听懂并回应）`
+        :`（情境：${s.title}。Anna 扮演外国朋友，先开口说了——听懂后回应他/她）`;
+      const en0=s.sentences[0][0], cn0=s.sentences[0][1], en1=s.sentences[1][0], cn1=s.sentences[1][1];
+      d.innerHTML=`<span class="cn">${escapeHtml(situa)}</span>
+        <div style="margin:8px 0 4px; font-size:16px; font-weight:600; line-height:1.5;">
+          <span class="speaker" onclick="speak('${en0.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(en0)}</div>
+        <span class="cn">🇨🇳 ${escapeHtml(cn0)}</span>
+        <div class="cn" style="margin-top:6px;">听懂了吗？点下面领读学这一句，然后回答 👇</div>`;
+      d.dataset.drill=`先学会对方的第一句，跟我读 || ${en0}|${cn0} || ${en1}|${cn1}`;
     }
     else{
       let html="";
@@ -1000,13 +1022,11 @@ function iseScore(pcm,text){
 }
 /* ================= 自由学模式 ================= */
 function openFree(){
-  document.getElementById("scenePage").style.display="none";
-  document.getElementById("chatPage").style.display="none";
-  const fp=document.getElementById("freePage"); fp.style.display="flex";
+  _pageStack.push(_currentPageId());
+  _showPage("freePage");
 }
 function closeFree(){
-  document.getElementById("freePage").style.display="none";
-  document.getElementById("scenePage").style.display="block";
+  goBack();
 }
 let _freeBusy=false;
 async function freeSend(){

@@ -341,16 +341,62 @@ function renderScenes(){
 
 /* ================= 场景课程弹窗 ================= */
 let currentScene=null, curRate=0.85;
+/* 对练设定的中文说明（key=场景id） */
+const ROLE_CN={
+  shopping:"Anna 扮演不懂中文的外国顾客，进店想买东西，你要接待她",
+  restaurant:"Anna 扮演不懂中文的外国顾客，进餐厅吃饭，你是服务员",
+  directions:"Anna 扮演迷路的外国游客，向你问路，你是热心的本地人",
+  hotel:"Anna 扮演不懂中文的外国客人，来酒店入住，你是前台",
+  airport:"Anna 扮演不懂中文的外国旅客，在机场寻求帮助，你是地勤/志愿者",
+  doctor:"Anna 扮演身体不舒服的外国人，来药店买药，你是药店店员",
+  taxi_pickup:"Anna 扮演刚上车的迷路外国乘客，你是司机，要确认目的地",
+  taxi_drive:"Anna 扮演坐在车上的外国乘客，想和你闲聊，你是司机",
+  taxi_pay:"Anna 扮演要付车费的外国乘客，可能有投诉，你是司机",
+  guide_welcome:"Anna 扮演你旅行团里的外国游客，你是导游，正在致欢迎词",
+  guide_intro:"Anna 扮演听讲解的外国游客，会提问，你是导游",
+  guide_help:"Anna 扮演遇到问题（走失/不舒服）的外国游客，你是导游，要帮她解决",
+  creator_intro:"Anna 扮演你的外国观众，你是博主，用英文介绍自己和账号",
+  creator_describe:"Anna 扮演好奇的外国观众，你是博主，介绍中国美食",
+  creator_live:"Anna 扮演进直播间的外国观众，你是主播，做开场和互动",
+  creator_sell:"Anna 扮演看直播的外国顾客，问价格问细节，你是带货主播",
+  creator_collab:"Anna 扮演外国品牌方，你是博主，介绍数据、谈报价",
+  creator_comment:"Anna 扮演给你评论的外国粉丝，你是博主，回复评论"
+};
+/* 音标缓存与查询（dictionaryapi.dev 免费接口） */
+const _ipaCache={};
+async function getIpa(text){
+  const w=(text||"").trim().split(/\s+/)[0].replace(/[^a-zA-Z']/g,"").toLowerCase();
+  if(!w)return "";
+  if(_ipaCache[w]!==undefined)return _ipaCache[w];
+  try{
+    const d=await (await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(w))).json();
+    let ipa=Array.isArray(d)?(d[0].phonetic||(d[0].phonetics.find(p=>p.text)||{}).text||""):"";
+    ipa=ipa.replace(/\/+/g,"");
+    _ipaCache[w]=ipa; return ipa;
+  }catch(e){ _ipaCache[w]=""; return ""; }
+}
+/* 词条行：英文+音标(异步)+中文+慢速/正常按钮 */
+function vocabLine(en,cn){
+  const uid="v"+Math.random().toString(36).slice(2,8);
+  setTimeout(()=>{ getIpa(en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },50);
+  const safe=en.replace(/'/g,"\\'");
+  return `<div class="vocab-item"><span class="en speaker" onclick="speak('${safe}')">🔊 ${en}</span> — ${cn}
+    <span id="${uid}" style="font-size:11px;color:var(--primary);font-family:serif;"></span>
+    <span style="display:inline-flex;gap:4px;margin-left:6px;">
+      <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 8px;font-size:11px;border:none;" onclick="speak('${safe}',0.7)">🐢 慢速</button>
+      <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 8px;font-size:11px;border:none;" onclick="speak('${safe}')">▶️ 正常</button>
+    </span></div>`;
+}
 function showScene(s){
   currentScene=s;
   document.getElementById("scTitle").textContent=s.emoji+" "+s.title;
   const b=document.getElementById("scBody");
   b.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:10px">🎯 本关目标：${s.goal}</p>`+
-    (s.role?`<p style="font-size:13px;color:var(--primary);background:#eef2ff;border-radius:8px;padding:8px 10px;margin-bottom:6px">👤 对练设定：${s.role}</p>`:"")+
-    `<h3 style="font-size:14px;margin:10px 0 4px">📖 核心词汇</h3>`+
-    s.vocab.map(v=>`<div class="vocab-item"><span class="en speaker" onclick="speak('${v[0].replace(/'/g,"\\'")}')">🔊 ${v[0]}</span> — ${v[1]}</div>`).join("")+
-    `<h3 style="font-size:14px;margin:14px 0 4px">🗣️ 高频短句（点击听发音）</h3>`+
-    s.sentences.map(x=>`<div class="sentence-item" onclick="speak('${x[0].replace(/'/g,"\\'")}')"><span class="en">🔊 ${x[0]}</span><div class="cn">${x[1]}</div></div>`).join("");
+    (s.role?`<p style="font-size:13px;color:var(--primary);background:#eef2ff;border-radius:8px;padding:8px 10px;margin-bottom:6px">👤 对练设定：${ROLE_CN[s.id]||""}</p>`:"")+
+    `<h3 style="font-size:14px;margin:10px 0 4px">📖 核心词汇（🐢慢速 ▶️正常）</h3>`+
+    s.vocab.map(v=>vocabLine(v[0],v[1])).join("")+
+    `<h3 style="font-size:14px;margin:14px 0 4px">🗣️ 高频短句</h3>`+
+    s.sentences.map(x=>vocabLine(x[0],x[1])).join("");
   document.getElementById("sceneModal").style.display="flex";
 }
 function setSpeed(r){curRate=r; speak("Hello! This is my normal speaking speed.",r);}
@@ -528,6 +574,8 @@ function startChat(){
 function backToScenes(){
   _pageStack.length=0;
   _showPage("scenePage");
+  // 回到本关目标页，方便再看单词句子
+  if(state.current) showScene(state.current);
 }
 function addMsg(role,en,cn,isFirst){
   const box=document.getElementById("msgs");
@@ -553,7 +601,17 @@ function addMsg(role,en,cn,isFirst){
       html+=`<span class="speaker" onclick="speak('${parts.reply.replace(/'/g,"\\'")}')">🔊</span>${escapeHtml(parts.reply)}`;
       if(parts.cn) html+=`<span class="cn">🇨🇳 ${escapeHtml(parts.cn)}</span>`;
       if(parts.correction) html+=`<div class="correction"><b>📝 纠错：</b>${escapeHtml(parts.correction)}</div>`;
-      if(parts.hint) html+=`<div class="correction" style="border-color:#4f6ef7;background:#eef2ff;color:#3b56d9"><b>💡 怎么答：</b>${escapeHtml(parts.hint)}</div>`;
+      if(parts.hint){
+        // 提取 "你可以说:" 后的完整参考回答句，加喇叭重播
+        const m=parts.hint.match(/你可以说[:：]\s*["“]?([^"”]+)["”]?/);
+        let hintHtml=`<div class="correction" style="border-color:#4f6ef7;background:#eef2ff;color:#3b56d9"><b>💡 怎么答：</b>${escapeHtml(m?parts.hint.replace(m[0],"").trim():parts.hint)}`;
+        if(m){
+          const ref=m[1].trim().replace(/'/g,"\\'");
+          hintHtml+=`<div style="margin-top:6px;font-size:14px;"><b>✏️ 参考回答：</b><span class="speaker" onclick="speak('${ref}')">🔊</span> ${escapeHtml(m[1].trim())}</div>`;
+        }
+        hintHtml+=`</div>`;
+        html+=hintHtml;
+      }
       d.innerHTML=html;
       d.dataset.target=en;
       d.dataset.drill=parts.drill||"";
@@ -612,7 +670,7 @@ Reply in EXACTLY this 5-part format, plain text, no markdown:
 <In-character English reply, max 2 short simple sentences, then one short follow-up question. EXCEPTION: if the student is asking for help in Chinese (not practicing), this part is instead a direct Chinese answer from the teacher, prefixed with 【老师解答】>
 🇨🇳 <把上面英文逐句翻译成中文>
 📝 Correction: <corrected student sentence> — <one short Chinese sentence explaining the error>. If the student's sentence had no error, write: 没有！说得很棒！
-💡 怎么答: <用中文教学生如何回应或询问：给出回答思路 + 可用的句型或关键词，不要给完整答案，鼓励学生自己组句>
+💡 怎么答: <用中文给思路，然后必须给出一句完整的参考回答，格式固定为：你可以说: "完整的英文句子"。学生词汇量小，没有完整参考句就答不出来。一次只推进一小步（问一个问题），等学生回答后再继续>
 🎓 领读: <见下方规则>
 
 🎓 领读 规则（像真人老师一样判断）：
@@ -677,7 +735,11 @@ Rules:
     if(_canAutoplay===false){
       const sp=msgEl.querySelector(".speaker");
       if(sp){ sp.style.animation="pulse 1.2s infinite"; sp.title="自动播放被拦截，点我播放"; }
+      return;
     }
+    // 接着自动朗读参考回答（像听两人对话）
+    const m=(p.hint||"").match(/你可以说[:：]\s*["“]?([^"”]+)["”]?/);
+    if(m&&m[1].trim()) return speak(m[1].trim(),null,true).catch(()=>{});
   });
   attachCheckBtn(msgEl,p.reply||reply);
   // 是否通关
@@ -722,7 +784,6 @@ function resetProgress(){ if(confirm("确定清空所有进度吗？")){state.do
 
 /* ================= AI 诊断领读 ================= */
 const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let _drillToken=0;
 /* 解析领读脚本：中文引导 + " || " 分隔的英文片段（每个片段支持 "英文|中文"） */
 function parseDrill(raw){
   if(!raw)return null;
@@ -750,46 +811,28 @@ function parseDrill(raw){
   if(!pieces.length)return null;
   return {guide, pieces};
 }
-/* 播放一次领读：中文口令 → 英文片段(慢速) → 停顿等跟读 */
-async function playDrill(d,ui){
-  const token=++_drillToken;
-  if(d.guide){ ui&&(ui.phase.innerHTML=`👩‍🏫 ${escapeHtml(d.guide)}`); await speakCn(d.guide); await _sleep(400); }
-  for(let i=0;i<d.pieces.length;i++){
-    if(token!==_drillToken)return;
-    const p=d.pieces[i];
-    ui&&(ui.phase.innerHTML=`🔊 慢速示范：<b>${escapeHtml(p.en)}</b>${p.cn?` <span style="color:#94a3b8">（${escapeHtml(p.cn)}）</span>`:""} <span style="color:#94a3b8">(${i+1}/${d.pieces.length})</span>`);
-    try{
-      await speak(p.en,0.7,true);   // 与正式朗读同一条链路，0.7倍速慢读
-    }catch(e){
-      if(token===_drillToken){ ui&&(ui.phase.innerHTML=`⚠️ 这个浏览器播放不了语音。请检查网络，或换个浏览器（Chrome/Edge）试试`); }
-      return;
-    }
-    if(token!==_drillToken)return;
-    ui&&(ui.phase.innerHTML=`🎧 轮到你读：<b>${escapeHtml(p.en)}</b>${p.cn?` <span style="color:#94a3b8">（${escapeHtml(p.cn)}）</span>`:""}`);
-    await _sleep(2800); // 留足跟读时间
-  }
-  if(token===_drillToken) ui&&(ui.phase.textContent="👏 读得不错！想再来一次就点「🔁 再读一次」");
-}
-/* 在消息下生成领读卡片 */
+/* 领读卡片：直接展示要学的片段，每个带音标+慢速/正常按钮 */
 function attachDrillCard(msgEl,drillRaw){
   const d=parseDrill(drillRaw);
   if(!d)return;
   const bar=document.createElement("div");
   bar.style.cssText="margin-top:6px;padding-top:6px;border-top:1px dashed #e5e7eb;";
-  bar.innerHTML=`<div class="drill-guide" style="font-size:12px;color:#3b56d9;margin-bottom:4px;">👩‍🏫 ${escapeHtml(d.guide||"跟我读这几句：")}</div>
-    <div class="drill-phase" style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">点「▶️ 领读一遍」开始</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="drill-go" style="border:none;border-radius:8px;background:#4f6ef7;color:#fff;padding:5px 11px;font-size:12px;">▶️ 领读一遍</button>
-      <button class="drill-again" style="border:none;border-radius:8px;background:#eef2ff;color:#3b56d9;padding:5px 11px;font-size:12px;">🔁 再读一次</button>
-      <button class="drill-hide" style="border:none;border-radius:8px;background:#f3f4f6;color:#6b7280;padding:5px 11px;font-size:12px;">我懂了</button>
-    </div>`;
+  let rows="";
+  d.pieces.forEach(p=>{
+    const uid="d"+Math.random().toString(36).slice(2,8);
+    const safe=p.en.replace(/'/g,"\\'");
+    rows+=`<div style="margin:6px 0;">
+      <div style="font-size:14px;font-weight:600;"><span class="speaker" onclick="speak('${safe}')">🔊</span> ${escapeHtml(p.en)}${p.cn?` <span style="color:var(--muted);font-weight:400;font-size:12px;">（${escapeHtml(p.cn)}）</span>`:""}</div>
+      <div id="${uid}" style="font-size:11px;color:var(--primary);font-family:serif;"></div>
+      <div style="display:flex;gap:6px;margin-top:3px;">
+        <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 10px;font-size:11px;border:none;" onclick="speak('${safe}',0.7)">🐢 慢速</button>
+        <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 10px;font-size:11px;border:none;" onclick="speak('${safe}')">▶️ 正常</button>
+      </div></div>`;
+    setTimeout(()=>{ getIpa(p.en).then(ipa=>{ const el=document.getElementById(uid); if(el&&ipa)el.textContent="/"+ipa+"/"; }); },80);
+  });
+  bar.innerHTML=`<div class="drill-guide" style="font-size:12px;color:#3b56d9;margin-bottom:4px;">👩‍🏫 ${escapeHtml(d.guide||"跟我读：")}</div>${rows}`;
   msgEl.appendChild(bar);
-  const phase=bar.querySelector(".drill-phase");
-  const ui={phase};
-  bar.querySelector(".drill-go").onclick=()=>playDrill(d,ui);
-  bar.querySelector(".drill-again").onclick=()=>playDrill(d,ui);
-  bar.querySelector(".drill-hide").onclick=()=>{ _drillToken++; bar.remove(); };
-  return {d,ui};
+  msgEl.parentElement.scrollTop=msgEl.parentElement.scrollHeight;
 }
 
 /* ================= 跟读打分（讯飞语音评测） ================= */

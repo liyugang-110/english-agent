@@ -113,10 +113,10 @@
   </div>
   <div style="background:#fff; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); box-shadow:0 -2px 12px rgba(0,0,0,.06); flex-shrink:0;">
     <div style="display:flex; gap:8px; margin-bottom:8px;">
-      <input id="freeInput" style="flex:1; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; font-size:14px;" placeholder="说或输入中文，如：我想结账" onkeydown="if(event.key==='Enter')freeSend()">
+      <input id="freeInput" style="flex:1; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; font-size:14px;" placeholder="输入中文或英文，如：我想结账 / potato" onkeydown="if(event.key==='Enter')freeSend()">
       <button class="icon-btn" style="background:var(--primary); border:none; color:#fff; border-radius:12px; padding:0 14px; font-size:14px;" onclick="freeSend()">翻译</button>
     </div>
-    <button id="freeMicBtn" style="width:100%; padding:12px; border:none; border-radius:12px; background:#eef2ff; color:var(--primary); font-size:15px; font-weight:600;" onclick="freeMic()">🎤 说中文（浏览器内可用）</button>
+    <div class="hint" style="margin-top:6px;">中→英、英→中都可以；查英文单词会带音标和中文意思</div>
   </div>
 </div>
 
@@ -1012,40 +1012,69 @@ let _freeBusy=false;
 async function freeSend(){
   if(_freeBusy)return;
   const inp=document.getElementById("freeInput");
-  const zh=inp.value.trim();
-  if(!zh)return;
+  const txt=inp.value.trim();
+  if(!txt)return;
   inp.value="";
   _freeBusy=true;
   const list=document.getElementById("freeList");
   const card=document.createElement("div");
   card.className="msg ai"; card.style.maxWidth="100%";
-  card.innerHTML=`<b style="color:var(--primary)">🀄 ${escapeHtml(zh)}</b><div class="cn">Anna 翻译中…</div>`;
+  const isEn=!/[\u4e00-\u9fa5]/.test(txt);
+  card.innerHTML=isEn
+    ? `<b style="color:var(--primary)">🇬🇧 ${escapeHtml(txt)}</b><div class="cn">Anna 查词中…</div>`
+    : `<b style="color:var(--primary)">🀄 ${escapeHtml(txt)}</b><div class="cn">Anna 翻译中…</div>`;
   list.appendChild(card); list.scrollTop=list.scrollHeight;
-  const en=await freeTranslate(zh);
-  if(!en){ card.querySelector(".cn").textContent="翻译失败，请检查网络或 API Key"; _freeBusy=false; return; }
-  renderFreeCard(card,zh,en);
-  // 存历史
-  const hist=JSON.parse(localStorage.getItem("anna_free")||"[]");
-  hist.unshift([zh,en]); localStorage.setItem("anna_free",JSON.stringify(hist.slice(0,50)));
-  _freeBusy=false;
-  // 自动读一遍
-  speak(en,state.rate);
+  try{
+    if(isEn){
+      const r=await freeTranslateEn(txt);
+      if(!r){ card.querySelector(".cn").textContent="查询失败，请检查网络或 API Key"; return; }
+      renderFreeEnCard(card,txt,r);
+      speak(txt,state.rate);
+    }else{
+      const en=await freeTranslateZh(txt);
+      if(!en){ card.querySelector(".cn").textContent="翻译失败，请检查网络或 API Key"; return; }
+      renderFreeZhCard(card,txt,en);
+      speak(en,state.rate);
+    }
+  }finally{
+    list.scrollTop=list.scrollHeight;
+    _freeBusy=false;
+  }
 }
-function renderFreeCard(card,zh,en){
+/* 中→英卡片 */
+function renderFreeZhCard(card,zh,en){
   const uid="f"+Math.random().toString(36).slice(2,8);
   card.innerHTML=`<b style="color:var(--primary)">🀄 ${escapeHtml(zh)}</b>
     <div style="margin:8px 0 4px; font-size:17px; font-weight:600; line-height:1.5;">
       <span class="speaker" onclick="speak('${en.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(en)}</div>
     <div class="cn">👆 点喇叭听发音，选择循环次数跟读</div>
-    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center;">
+    ${freeLoopBar(uid)}
+    <div id="${uid}" class="cn" style="margin-top:6px;"></div>`;
+  card.dataset.en=en;
+  card.parentElement.scrollTop=card.parentElement.scrollHeight;
+}
+function freeLoopBar(uid){
+  return `<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center;">
       <span style="font-size:12px;color:var(--muted)">循环跟读:</span>
       <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:8px;padding:6px 10px;font-size:12px;" onclick="freeLoop('${uid}',3)">3 遍慢速</button>
       <button class="icon-btn" style="background:#eef2ff;color:var(--primary);border-radius:8px;padding:6px 10px;font-size:12px;" onclick="freeLoop('${uid}',5)">5 遍正常</button>
       <button class="icon-btn" style="background:#fef3c7;color:#b45309;border-radius:8px;padding:6px 10px;font-size:12px;" onclick="stopLoop()">⏹ 停止</button>
     </div>
     <div id="${uid}" class="cn" style="margin-top:6px;"></div>`;
+}
+/* 英→中卡片：中文意思 + 音标 + 循环跟读 */
+function renderFreeEnCard(card,en,r){
+  const uid="f"+Math.random().toString(36).slice(2,8);
+  card.innerHTML=`<b style="color:var(--primary)">🇬🇧 ${escapeHtml(en)}</b>
+    <div style="margin:8px 0 4px; font-size:17px; font-weight:600; line-height:1.5;">
+      <span class="speaker" onclick="speak('${en.replace(/'/g,"\\'")}')">🔊</span> ${escapeHtml(r.cn)}</div>
+    ${r.ipa?`<div class="cn" style="font-size:14px;color:var(--primary);font-family:serif;">/${escapeHtml(r.ipa)}/ ← 照着音标读</div>`:""}
+    ${r.key?`<div class="cn">🔑 关键词：<b style="color:var(--primary)">${escapeHtml(r.key)}</b>${r.keyIpa?` /${escapeHtml(r.keyIpa)}/`:""}</div>`:""}
+    <div class="cn">👆 点喇叭听发音，选择循环次数跟读</div>
+    ${freeLoopBar(uid)}
+    <div id="${uid}" class="cn" style="margin-top:6px;"></div>`;
   card.dataset.en=en;
-  list.scrollTop=list.scrollHeight;
+  card.parentElement.scrollTop=card.parentElement.scrollHeight;
 }
 let _loopStop=false;
 async function freeLoop(uid,times){
@@ -1067,7 +1096,7 @@ async function freeLoop(uid,times){
 }
 function stopLoop(){_loopStop=true;}
 /* 中文→英文（DeepSeek；无 Key 用内置常用句兜底） */
-async function freeTranslate(zh){
+async function freeTranslateZh(zh){
   const key=state.key.trim();
   if(!key){
     const dict={"我想结账":"Could we have the bill, please?","今天天气真好":"Lovely weather today, isn't it?","我是开出租车的":"I work as a taxi driver.","我想点餐":"I'd like to order, please.","多少钱":"How much is it?","谢谢你的帮助":"Thank you so much for your help!","再见":"See you later!","我很高兴认识你":"Nice to meet you!"};
@@ -1078,14 +1107,49 @@ async function freeTranslate(zh){
     const res=await fetch("https://api.deepseek.com/chat/completions",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-      body:JSON.stringify({model:"deepseek-v4-flash",temperature:0.3,max_tokens:120,messages:[
+      body:JSON.stringify({model:"deepseek-v4-flash",temperature:0.3,max_tokens:300,messages:[
         {role:"system",content:"Translate the user's Chinese into ONE natural, spoken English sentence that a beginner can say in daily conversation (CEFR A2). Reply with the English sentence ONLY, no quotes, no explanation. If the user asks a question about English instead, briefly answer in Chinese and give the English phrase."},
         {role:"user",content:zh}
       ]})
     });
     const data=await res.json();
-    return data.choices[0].message.content.trim().replace(/^["']|["']$/g,"");
+    return (data.choices[0].message.content||"").trim().replace(/^["']|["']$/g,"")||null;
   }catch(e){ return null; }
+}
+/* 英文→中文（DeepSeek 返回 中文意思+音标+关键词音标；无 Key 用免费词典 API） */
+async function freeTranslateEn(en){
+  const key=state.key.trim();
+  if(key){
+    try{
+      const res=await fetch("https://api.deepseek.com/chat/completions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model:"deepseek-v4-flash",temperature:0.3,max_tokens:300,messages:[
+          {role:"system",content:'你是英语词典。用户给你一个英文单词或短句，用 JSON 回答（不要 markdown 代码块）：{"cn":"中文意思（简洁口语化）","ipa":"整句或单词的美式音标，不含斜杠","key":"最重要的关键词","keyIpa":"关键词音标，不含斜杠"}。若输入是短句，cn 给整句意思，key 挑最核心的词。'},
+          {role:"user",content:en}
+        ]})
+      });
+      const data=await res.json();
+      const raw=(data.choices[0].message.content||"").replace(/```json|```/g,"").trim();
+      const m=raw.match(/\{[\s\S]*\}/);
+      if(m){ const o=JSON.parse(m[0]); if(o.cn)return o; }
+    }catch(e){}
+  }
+  // 无 Key 兜底：dictionaryapi.dev 音标 + MyMemory 翻译
+  try{
+    const word=en.trim().split(/\s+/)[0].replace(/[^a-zA-Z']/g,"");
+    let ipa="",cn="";
+    try{
+      const d=await (await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(word))).json();
+      if(Array.isArray(d)){ ipa=(d[0].phonetic||(d[0].phonetics.find(p=>p.text)||{}).text||"").replace(/\//g,""); }
+    }catch(e){}
+    try{
+      const t=await (await fetch("https://api.mymemory.translated.net/get?q="+encodeURIComponent(en)+"&langpair=en|zh-CN")).json();
+      cn=t.responseData&&t.responseData.translatedText||"";
+    }catch(e){}
+    if(cn){ return {cn,ipa,key:word,keyIpa:ipa}; }
+  }catch(e){}
+  return null;
 }
 /* 自由学页的中文语音识别 */
 function freeMic(){
